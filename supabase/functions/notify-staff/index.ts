@@ -89,6 +89,22 @@ Deno.serve(async (req) => {
     console.log('Webhook received:', JSON.stringify(body.record))
 
     const record = body.record
+    const oldRecord = body.old_record
+
+    // Determine notification type — handle INSERT (new request) and UPDATE (arrived)
+    let notificationType: 'new_request' | 'parent_arrived' | null = null
+
+    if (body.type === 'INSERT' && record.status === 'requested') {
+      notificationType = 'new_request'
+    } else if (body.type === 'UPDATE' && record.status === 'arrived' && oldRecord?.status !== 'arrived') {
+      notificationType = 'parent_arrived'
+    }
+
+    if (!notificationType) {
+      console.log('No actionable event:', body.type, record.status)
+      return new Response('ok')
+    }
+
     if (!record?.child_id) {
       console.log('No child_id in record')
       return new Response('ok')
@@ -126,6 +142,7 @@ Deno.serve(async (req) => {
 
     // Step 4: send push to each subscription (bodyless — FCM requires encrypted
     // payloads; we skip encryption and let the service worker show a fixed notification)
+    console.log('Sending', notificationType, 'push to', subs.length, 'subscriber(s)')
     for (const sub of subs) {
       try {
         const parsed = JSON.parse(sub.subscription)
