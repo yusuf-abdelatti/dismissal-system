@@ -5,7 +5,6 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 )
 
-// Convert base64url to Uint8Array
 function base64urlToUint8Array(base64url: string): Uint8Array {
   const padding = '='.repeat((4 - (base64url.length % 4)) % 4)
   const base64 = (base64url + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -13,78 +12,76 @@ function base64urlToUint8Array(base64url: string): Uint8Array {
   return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
 }
 
-// Sign a message with ECDSA P-256
-async function signMessage(privateKey: CryptoKey, message: Uint8Array): Promise<Uint8Array> {
-  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, privateKey, message)
-  return new Uint8Array(sig)
-}
+async function sendPush(
+  subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
+  payload: string
+) {
+  const vapidPublic = Deno.env.get('VAPID_PUBLIC_KEY')!
+  const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY')!
 
-// Build VAPID authorization header
-async function buildVapidAuth(
-  audience: string,
-  subject: string,
-  publicKeyB64: string,
-  privateKeyB64: string
-): Promise<string> {
-  const header = { typ: 'JWT', alg: 'ES256' }
+  const url = new URL(subscription.endpoint)
+  const audience = `${url.protocol}//${url.host}`
+  const subject = 'mailto:admin@nursery.com'
+
+  // Build JWK from raw VAPID key bytes so Web Crypto can import it
+  const privateKeyBytes = base64urlToUint8Array(vapidPrivate)
+  const publicKeyBytes = base64urlToUint8Array(vapidPublic)
+
+  const privateJwk = {
+    kty: 'EC',
+    crv: 'P-256',
+    x: btoa(String.fromCharCode(...publicKeyBytes.slice(1, 33)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+    y: btoa(String.fromCharCode(...publicKeyBytes.slice(33)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+    d: vapidPrivate,
+    key_ops: ['sign'],
+    ext: true,
+  }
+
+  const privateKey = await crypto.subtle.importKey(
+    'jwk',
+    privateJwk,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign']
+  )
+
+  // Build VAPID JWT
   const now = Math.floor(Date.now() / 1000)
-  const payload = { aud: audience, exp: now + 43200, sub: subject }
+  const header = { typ: 'JWT', alg: 'ES256' }
+  const claims = { aud: audience, exp: now + 43200, sub: subject }
 
   const encode = (obj: object) =>
     btoa(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
-  const unsignedToken = `${encode(header)}.${encode(payload)}`
+  const unsignedToken = `${encode(header)}.${encode(claims)}`
+  const sigBytes = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    privateKey,
+    new TextEncoder().encode(unsignedToken)
+  )
+  const sig = btoa(String.fromCharCode(...new Uint8Array(sigBytes)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
-  const privateKeyBytes = base64urlToUint8Array(privateKeyB64)
-  const privateKey = await crypto.subtle.importKey(
-    'pkcs8',
-    privateKeyBytes,
-    { name: 'ECDSA', namedCurve: 'P-256' },
-    false,
-    ['sign']
-  ).catch(async () => {
-    // Try raw format
-    return await crypto.subtle.importKey(
-      'raw',
-      privateKeyBytes,
-      { name: 'ECDSA', namedCurve: 'P-256' },
-      false,
-      ['sign']
-    )
-  })
-
-  const sig = await signMessage(privateKey, new TextEncoder().encode(unsignedToken))
-  const sigB64 = btoa(String.fromCharCode(...sig)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-  const token = `${unsignedToken}.${sigB64}`
-
-  return `vapid t=${token},k=${publicKeyB64}`
-}
-
-async function sendPush(subscription: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: string) {
-  const vapidPublic = Deno.env.get('VAPID_PUBLIC_KEY')!
-  const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY')!
-  const subject = 'mailto:admin@nursery.com'
-
-  const url = new URL(subscription.endpoint)
-  const audience = `${url.protocol}//${url.host}`
-
-  const vapidAuth = await buildVapidAuth(audience, subject, vapidPublic, vapidPrivate)
+  const token = `${unsignedToken}.${sig}`
+  const vapidAuth = `vapid t=${token},k=${vapidPublic}`
 
   const response = await fetch(subscription.endpoint, {
     method: 'POST',
     headers: {
       'Authorization': vapidAuth,
-      'Content-Type': 'application/octet-stream',
+      'Content-Type': 'text/plain;charset=UTF-8',
       'TTL': '60',
     },
-    body: new TextEncoder().encode(payload),
+    body: payload,
   })
 
   if (!response.ok) {
     const text = await response.text()
-    console.error('Push failed:', response.status, text)
+    console.error('Push send failed:', response.status, text)
   } else {
-    console.log('Push sent successfully to:', subscription.endpoint)
+    console.log('Push sent OK to:', subscription.endpoint.substring(0, 50))
   }
 }
 
