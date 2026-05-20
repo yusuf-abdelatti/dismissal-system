@@ -13,8 +13,7 @@ function base64urlToUint8Array(base64url: string): Uint8Array {
 }
 
 async function sendPush(
-  subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
-  payload: string
+  subscription: { endpoint: string; keys: { p256dh: string; auth: string } }
 ) {
   const vapidPublic = Deno.env.get('VAPID_PUBLIC_KEY')!
   const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY')!
@@ -71,10 +70,9 @@ async function sendPush(
     method: 'POST',
     headers: {
       'Authorization': vapidAuth,
-      'Content-Type': 'text/plain;charset=UTF-8',
       'TTL': '60',
     },
-    body: payload,
+    body: null,
   })
 
   if (!response.ok) {
@@ -126,17 +124,12 @@ Deno.serve(async (req) => {
     console.log('Subscriptions:', JSON.stringify(subs), 'Error:', subsError)
     if (!subs?.length) return new Response('ok')
 
-    // Step 4: send push to each subscription
-    const notification = JSON.stringify({
-      title: '🔔 New Pickup Request',
-      body: `${child.full_name} needs to be picked up`,
-      requestId: record.id,
-    })
-
+    // Step 4: send push to each subscription (bodyless — FCM requires encrypted
+    // payloads; we skip encryption and let the service worker show a fixed notification)
     for (const sub of subs) {
       try {
         const parsed = JSON.parse(sub.subscription)
-        await sendPush(parsed, notification)
+        await sendPush(parsed)
       } catch (e) {
         console.error('Send error:', e)
       }
