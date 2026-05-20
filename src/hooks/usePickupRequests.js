@@ -67,7 +67,33 @@ export function usePickupRequests() {
 
     channelRef.current = channel
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchRequests()
+        if (channelRef.current) {
+          supabase.removeChannel(channelRef.current)
+        }
+        const newChannel = supabase
+          .channel(`pickup_realtime_${Date.now()}`)
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'pickup_requests' },
+            (payload) => {
+              console.log('Realtime event:', payload.eventType, payload.new)
+              fetchRequests()
+            }
+          )
+          .subscribe((status) => {
+            console.log('Realtime subscription status:', status)
+          })
+        channelRef.current = newChannel
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
       }
