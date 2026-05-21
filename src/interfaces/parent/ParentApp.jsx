@@ -12,6 +12,7 @@ export default function ParentApp() {
   const [error, setError] = useState(null)
   const [showGoodbye, setShowGoodbye] = useState(false)
   const channelRef = useRef(null)
+  const { permission, subscribed, error: pushError, subscribe } = usePushNotifications(user?.id)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -157,8 +158,6 @@ export default function ParentApp() {
 
   const accentColor = child?.classes?.color || '#3B82F6'
   const firstName = child?.full_name?.split(' ')[0] || child?.full_name || ''
-
-  const { permission, subscribed, error: pushError, subscribe } = usePushNotifications(user?.id)
 
   // State E — goodbye after delivered/cleared
   if (showGoodbye) {

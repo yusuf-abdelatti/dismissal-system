@@ -83,49 +83,68 @@ async function sendPush(
 
 Deno.serve(async (req) => {
   try {
-    const body = await req.json()
+    const rawBody = await req.text()
+    console.log('RAW BODY:', rawBody.substring(0, 500))
+
+    const body = JSON.parse(rawBody)
+    console.log('TYPE:', body.type)
+    console.log('TABLE:', body.table)
+    console.log('RECORD:', JSON.stringify(body.record))
+    console.log('OLD RECORD:', JSON.stringify(body.old_record))
+
     const record = body.record
     const oldRecord = body.old_record
 
-    // Only handle: new request (INSERT/requested) or parent arrived (UPDATE/arrived)
-    const isNewRequest = body.type === 'INSERT' && record.status === 'requested'
-    const isArrived = body.type === 'UPDATE' && record.status === 'arrived' && oldRecord?.status !== 'arrived'
-    if (!isNewRequest && !isArrived) return new Response('ok')
+    const isNewRequest = body.type === 'INSERT' && record?.status === 'requested'
+    const isArrived = body.type === 'UPDATE' && record?.status === 'arrived' && oldRecord?.status !== 'arrived'
 
-    if (!record?.child_id) return new Response('ok')
+    console.log('isNewRequest:', isNewRequest, 'isArrived:', isArrived)
 
-    // Step 1: get the child's class
-    const { data: child } = await supabase
+    if (!isNewRequest && !isArrived) {
+      console.log('Early exit — not a relevant event')
+      return new Response('ok')
+    }
+
+    if (!record?.child_id) {
+      console.log('No child_id')
+      return new Response('ok')
+    }
+
+    const { data: child, error: childError } = await supabase
       .from('children')
       .select('class_id, full_name')
       .eq('id', record.child_id)
       .single()
 
+    console.log('Child:', JSON.stringify(child), 'Error:', childError?.message)
+
     if (!child?.class_id) return new Response('ok')
 
-    // Step 2: get staff IDs assigned to this class
-    const { data: staffRows } = await supabase
+    const { data: staffRows, error: staffError } = await supabase
       .from('staff_profiles')
       .select('id')
       .eq('class_id', child.class_id)
+
+    console.log('Staff rows:', JSON.stringify(staffRows), 'Error:', staffError?.message)
 
     if (!staffRows?.length) return new Response('ok')
 
     const staffIds = staffRows.map((s: { id: string }) => s.id)
 
-    // Step 3: get push subscriptions for those staff members
-    const { data: subs } = await supabase
+    const { data: subs, error: subError } = await supabase
       .from('push_subscriptions')
       .select('subscription')
       .in('user_id', staffIds)
 
+    console.log('Subscriptions:', subs?.length, 'Error:', subError?.message)
+
     if (!subs?.length) return new Response('ok')
 
-    // Step 4: send bodyless push to each subscription
     for (const sub of subs) {
       try {
         const parsed = JSON.parse(sub.subscription)
         await sendPush(parsed)
+        console.log('Push sent to:', parsed.endpoint.substring(0, 40))
       } catch (e) {
         console.error('Send error:', e)
       }
@@ -133,7 +152,7 @@ Deno.serve(async (req) => {
 
     return new Response('ok')
   } catch (err) {
-    console.error('Function error:', err)
+    console.error('Function error:', String(err))
     return new Response('error', { status: 500 })
   }
 })
