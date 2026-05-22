@@ -1,10 +1,10 @@
 {
-  "name": "Nursery Dismissal",
-  "short_name": "Nursery",
+  "name": "Finnly Smart Dismissal",
+  "short_name": "Finnly",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0F1117",
-  "theme_color": "#0F1117",
+  "background_color": "#EAE5DF",
+  "theme_color": "#6B9BAF",
   "icons": [
     {
       "src": "/icon.png",
