@@ -124,6 +124,21 @@ export default function DisplayScreen() {
       .then(({ data }) => {
         if (data?.branch_name) setBranchName(data.branch_name)
       })
+
+    const channel = supabase
+      .channel('settings_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'settings' },
+        (payload) => {
+          if (payload.new?.branch_name) {
+            setBranchName(payload.new.branch_name)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
   }, [])
 
   const activate = async () => {
