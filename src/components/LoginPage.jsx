@@ -48,14 +48,12 @@ export default function LoginPage() {
       style={{ backgroundColor: '#EAE5DF' }}
     >
       <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-xl">
-        {/* Logo placeholder — replace with <img src="/finnly-logo.png" /> when available */}
         <div className="flex justify-center mb-6">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center"
-            style={{ backgroundColor: '#6B9BAF' }}
-          >
-            <span className="text-white text-2xl font-bold">F</span>
-          </div>
+          <img
+            src="/finnly-logo.png"
+            alt="Finnly"
+            className="w-32 h-auto mx-auto mb-2"
+          />
         </div>
 
         <h1 className="text-2xl font-bold text-center mb-1" style={{ color: '#6B9BAF' }}>

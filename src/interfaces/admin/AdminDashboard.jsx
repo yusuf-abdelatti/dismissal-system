@@ -56,6 +56,11 @@ export default function AdminDashboard() {
         style={{ backgroundColor: '#6B9BAF' }}
       >
         <div className="p-6 border-b border-white/20">
+          <img
+            src="/finnly-logo.png"
+            alt="Finnly"
+            className="w-28 h-auto mb-6"
+          />
           <h1 className="text-lg font-bold text-white">Finnly Admin</h1>
           <p className="text-xs mt-1 truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>{user?.email}</p>
         </div>

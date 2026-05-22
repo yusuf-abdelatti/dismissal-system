@@ -75,7 +75,10 @@ function LiveBoard({ audioCtx, branchName }) {
       {/* Header */}
       <div className="flex justify-between items-center px-8 py-5 border-b border-gray-800">
         <div>
-          <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: '#6B9BAF' }}>Finnly</div>
+          <div className="flex items-center gap-2 mb-0.5">
+            <img src="/finnly-logo.png" alt="Finnly" className="h-8 w-auto" />
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6B9BAF' }}>Finnly</span>
+          </div>
           <div className="text-2xl font-bold text-white">{branchName}</div>
           <div className="text-gray-500 text-xs mt-0.5 uppercase tracking-widest">
             Live Dismissal Board
