@@ -113,7 +113,7 @@ function LiveBoard({ audioCtx, branchName }) {
 export default function DisplayScreen() {
   const [activated, setActivated] = useState(false)
   const [audioCtx, setAudioCtx] = useState(null)
-  const [branchName, setBranchName] = useState('Nursery Dismissal')
+  const [branchName, setBranchName] = useState('Finnly')
 
   useEffect(() => {
     supabase
