@@ -189,6 +189,13 @@ export default function StaffApp() {
         </select>
 
         <button
+          onClick={subscribe}
+          className="text-gray-500 hover:text-gray-800 text-sm px-3 py-2 border border-gray-200 rounded-lg transition-colors"
+        >
+          🔔 Notifications
+        </button>
+
+        <button
           onClick={logout}
           className="text-gray-500 hover:text-gray-800 text-sm px-3 py-2 border border-gray-200 rounded-lg transition-colors"
         >
@@ -197,22 +204,9 @@ export default function StaffApp() {
       </div>
 
       <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
-        {permission !== 'granted' && !subscribed && (
-          <div className="bg-blue-50 border border-blue-200 px-4 py-3 rounded-xl mb-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-800">
-                Enable notifications to get alerted for new pickup requests
-              </span>
-              <button
-                onClick={subscribe}
-                className="ml-4 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors whitespace-nowrap flex-shrink-0"
-              >
-                Enable
-              </button>
-            </div>
-            {pushError && (
-              <p className="text-red-600 text-xs mt-2">{pushError}</p>
-            )}
+        {pushError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm">
+            {pushError}
           </div>
         )}
 

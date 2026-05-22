@@ -25,6 +25,11 @@ export function usePushNotifications(userId) {
   const subscribe = async () => {
     try {
       setError(null)
+      // Always re-check actual browser permission, not cached state
+      const currentPermission = typeof Notification !== 'undefined'
+        ? Notification.permission
+        : 'default'
+      setPermission(currentPermission)
 
       if (!checkSupported()) {
         const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)

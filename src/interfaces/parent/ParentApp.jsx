@@ -186,12 +186,20 @@ export default function ParentApp() {
             </p>
             <h1 className="text-3xl font-bold mt-1">{child?.full_name}</h1>
           </div>
-          <button
-            onClick={logout}
-            className="text-white text-opacity-70 text-xs border border-white border-opacity-30 rounded px-2 py-1 mt-1"
-          >
-            Sign out
-          </button>
+          <div className="flex items-center gap-2 mt-1">
+            <button
+              onClick={subscribe}
+              className="text-white text-opacity-70 text-xs border border-white border-opacity-30 rounded px-2 py-1"
+            >
+              🔔
+            </button>
+            <button
+              onClick={logout}
+              className="text-white text-opacity-70 text-xs border border-white border-opacity-30 rounded px-2 py-1"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </div>
 
