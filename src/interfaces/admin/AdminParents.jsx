@@ -100,7 +100,8 @@ export default function AdminParents() {
       })
 
     if (createError) {
-      setError('Something went wrong. Please try again.')
+      console.error('Create user error:', createError)
+      setError(`Failed to create account: ${createError.message}`)
       setSaving(false)
       return
     }

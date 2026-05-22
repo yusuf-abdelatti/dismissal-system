@@ -33,6 +33,7 @@ export default function AdminChildren() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
     load()
@@ -137,6 +138,12 @@ export default function AdminChildren() {
     load()
   }
 
+  const deleteChild = async (childId) => {
+    setDeleteTarget(null)
+    await supabaseAdmin.from('children').delete().eq('id', childId)
+    load()
+  }
+
   if (loading) {
     return <div className="text-gray-400 py-12 text-center">Loading…</div>
   }
@@ -219,9 +226,15 @@ export default function AdminChildren() {
                   </button>
                   <button
                     onClick={() => toggleActive(child)}
-                    className="text-gray-500 hover:underline text-xs"
+                    className="text-gray-500 hover:underline text-xs mr-3"
                   >
                     {child.is_active ? 'Deactivate' : 'Activate'}
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget(child)}
+                    className="text-red-500 hover:underline text-xs"
+                  >
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -236,6 +249,29 @@ export default function AdminChildren() {
           </tbody>
         </table>
       </div>
+
+      {deleteTarget && (
+        <Modal title="Delete Child" onClose={() => setDeleteTarget(null)}>
+          <p className="text-sm text-gray-700 mb-5">
+            Permanently delete <strong>{deleteTarget.full_name}</strong>? All linked
+            pickup requests will also be removed. This cannot be undone.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => setDeleteTarget(null)}
+              className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => deleteChild(deleteTarget.id)}
+              className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              Delete
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {showModal && (
         <Modal

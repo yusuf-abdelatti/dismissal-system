@@ -62,6 +62,7 @@ export default function AdminStaff() {
       supabase.from('classes').select('id, name').order('name'),
     ])
 
+    if (adminResult.error) console.error('listUsers error:', adminResult.error)
     const userEmailMap = Object.fromEntries(
       (adminResult.data?.users || []).map((u) => [u.id, u.email])
     )
@@ -97,7 +98,8 @@ export default function AdminStaff() {
       })
 
     if (createError) {
-      setError('Something went wrong. Please try again.')
+      console.error('Create user error:', createError)
+      setError(`Failed to create account: ${createError.message}`)
       setSaving(false)
       return
     }
