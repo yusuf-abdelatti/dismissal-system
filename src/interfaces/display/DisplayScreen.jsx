@@ -75,6 +75,7 @@ function LiveBoard({ audioCtx, branchName }) {
       {/* Header */}
       <div className="flex justify-between items-center px-8 py-5 border-b border-gray-800">
         <div>
+          <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: '#6B9BAF' }}>Finnly</div>
           <div className="text-2xl font-bold text-white">{branchName}</div>
           <div className="text-gray-500 text-xs mt-0.5 uppercase tracking-widest">
             Live Dismissal Board
@@ -142,12 +143,14 @@ export default function DisplayScreen() {
         onClick={activate}
       >
         <div className="text-center px-8">
+          <div className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#6B9BAF' }}>Finnly</div>
           <h1 className="text-white text-4xl font-bold mb-2">{branchName}</h1>
           <p className="text-gray-600 text-sm mb-12 uppercase tracking-widest">
             Dismissal System
           </p>
           <button
-            className="bg-blue-600 hover:bg-blue-500 text-white text-2xl font-semibold px-16 py-7 rounded-2xl transition-colors shadow-2xl"
+            className="text-white text-2xl font-semibold px-16 py-7 rounded-2xl transition-opacity shadow-2xl"
+            style={{ backgroundColor: '#6B9BAF' }}
             onClick={(e) => {
               e.stopPropagation()
               activate()

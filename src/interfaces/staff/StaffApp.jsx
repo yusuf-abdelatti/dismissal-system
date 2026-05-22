@@ -56,7 +56,7 @@ function RequestCard({ request, onMarkReady, onMarkDelivered }) {
       style={{
         borderColor: `${classColor}40`,
         backgroundColor: isArrived ? `${classColor}15` : 'white',
-        boxShadow: isArrived ? `0 0 12px ${classColor}44` : '0 1px 3px rgba(0,0,0,0.06)',
+        boxShadow: isArrived ? '0 0 12px rgba(196,112,106,0.5)' : '0 1px 3px rgba(0,0,0,0.06)',
       }}
     >
       <div className="flex items-center gap-3 mb-3">
@@ -84,14 +84,15 @@ function RequestCard({ request, onMarkReady, onMarkDelivered }) {
           style={
             isReady || isArrived
               ? { backgroundColor: '#D1FAE5', color: '#065F46' }
-              : { backgroundColor: '#EFF6FF', color: '#1D4ED8' }
+              : { backgroundColor: '#6B9BAF', color: 'white' }
           }
         >
           {isReady ? '✓ Ready' : 'Mark Ready'}
         </button>
         <button
           onClick={() => onMarkDelivered(request.id)}
-          className="flex-1 py-3 rounded-lg text-sm font-semibold bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+          className="flex-1 py-3 rounded-lg text-sm font-semibold transition-colors"
+          style={{ backgroundColor: '#C4706A', color: 'white' }}
         >
           Mark Delivered
         </button>
@@ -169,20 +170,21 @@ export default function StaffApp() {
   const sorted = sortRequests(filtered)
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      <div className="bg-white border-b px-4 py-3 flex items-center gap-3">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#EAE5DF' }}>
+      <div className="px-4 py-3 flex items-center gap-3" style={{ backgroundColor: '#6B9BAF' }}>
         <div className="flex-1">
-          <span className="font-semibold text-gray-800">{staffName || 'Staff'}</span>
+          <span className="font-semibold text-white">{staffName || 'Staff'}</span>
         </div>
 
         <select
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="rounded-lg px-3 py-2 text-sm focus:outline-none"
+          style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
         >
-          <option value="">All Classes</option>
+          <option value="" style={{ backgroundColor: '#6B9BAF' }}>All Classes</option>
           {classes.map((cls) => (
-            <option key={cls.id} value={cls.id}>
+            <option key={cls.id} value={cls.id} style={{ backgroundColor: '#6B9BAF' }}>
               {cls.name}
             </option>
           ))}
@@ -190,21 +192,23 @@ export default function StaffApp() {
 
         <button
           onClick={logout}
-          className="text-gray-500 hover:text-gray-800 text-sm px-3 py-2 border border-gray-200 rounded-lg transition-colors"
+          className="text-sm px-3 py-2 rounded-lg transition-colors"
+          style={{ color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.3)' }}
         >
           Sign out
         </button>
       </div>
 
       {isSupported && status !== 'subscribed' && status !== 'denied' && (
-        <div className="bg-blue-50 border-b border-blue-200 px-4 py-3 flex items-center justify-between">
-          <span className="text-sm text-blue-800">
+        <div className="border-b px-4 py-3 flex items-center justify-between" style={{ backgroundColor: '#FFFBEB', borderColor: '#C49A45' }}>
+          <span className="text-sm" style={{ color: '#92400E' }}>
             Enable notifications to get alerted for new pickup requests
           </span>
           <button
             onClick={subscribe}
             disabled={status === 'requesting'}
-            className="ml-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+            className="ml-4 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+            style={{ backgroundColor: '#C49A45' }}
           >
             {status === 'requesting' ? 'Enabling…' : 'Enable'}
           </button>

@@ -134,7 +134,7 @@ export default function ParentApp() {
 
   if (loadingData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#EAE5DF' }}>
         <div className="text-gray-500 text-lg">Loading…</div>
       </div>
     )
@@ -142,7 +142,7 @@ export default function ParentApp() {
 
   if (error && !child) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+      <div className="min-h-screen flex items-center justify-center px-6" style={{ backgroundColor: '#EAE5DF' }}>
         <div className="text-center">
           <p className="text-red-600 text-lg mb-4">{error}</p>
           <button
@@ -173,7 +173,7 @@ export default function ParentApp() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#EAE5DF' }}>
       {/* Header */}
       <div
         className="px-6 pt-12 pb-8 text-white"
@@ -214,7 +214,8 @@ export default function ParentApp() {
                 <button
                   onClick={subscribe}
                   disabled={status === 'requesting'}
-                  className="ml-3 bg-amber-500 text-white px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+                  className="ml-3 text-white px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+                  style={{ backgroundColor: '#C49A45' }}
                 >
                   {status === 'requesting' ? '…' : 'Enable'}
                 </button>
@@ -228,7 +229,7 @@ export default function ParentApp() {
               onClick={requestPickup}
               disabled={actionLoading}
               className="w-full text-white font-semibold text-xl py-5 rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
-              style={{ backgroundColor: accentColor, minHeight: '72px' }}
+              style={{ backgroundColor: '#6B9BAF', minHeight: '72px' }}
             >
               {actionLoading ? 'Sending…' : 'Request Pickup'}
             </button>
@@ -252,8 +253,8 @@ export default function ParentApp() {
             <button
               onClick={markArrived}
               disabled={actionLoading}
-              className="w-full bg-green-500 text-white font-semibold text-xl py-5 rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
-              style={{ minHeight: '72px' }}
+              className="w-full text-white font-semibold text-xl py-5 rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
+              style={{ backgroundColor: '#C49A45', minHeight: '72px' }}
             >
               {actionLoading ? 'Updating…' : 'I Have Arrived'}
             </button>
@@ -263,7 +264,7 @@ export default function ParentApp() {
         {/* State C — ready, warm message */}
         {request && request.status === 'ready' && (
           <div className="w-full max-w-sm text-center">
-            <div className="rounded-2xl p-6 mb-6" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+            <div className="rounded-2xl p-6 mb-6" style={{ backgroundColor: '#FFFBEB', border: '1px solid #C49A45' }}>
               <div className="text-4xl mb-3">🌟</div>
               <p className="font-bold text-gray-800 text-xl mb-2">
                 {firstName} is ready and waiting for you!
@@ -278,8 +279,8 @@ export default function ParentApp() {
             <button
               onClick={markArrived}
               disabled={actionLoading}
-              className="w-full bg-amber-500 text-white font-semibold text-xl py-5 rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
-              style={{ minHeight: '72px' }}
+              className="w-full text-white font-semibold text-xl py-5 rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
+              style={{ backgroundColor: '#C49A45', minHeight: '72px' }}
             >
               {actionLoading ? 'Updating…' : 'I Have Arrived'}
             </button>

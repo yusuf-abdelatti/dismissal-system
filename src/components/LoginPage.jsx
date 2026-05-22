@@ -43,10 +43,27 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ backgroundColor: '#EAE5DF' }}
+    >
       <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-xl">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Nursery Dismissal</h1>
-        <p className="text-gray-500 text-sm mb-6">Sign in to continue</p>
+        {/* Logo placeholder — replace with <img src="/finnly-logo.png" /> when available */}
+        <div className="flex justify-center mb-6">
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center"
+            style={{ backgroundColor: '#6B9BAF' }}
+          >
+            <span className="text-white text-2xl font-bold">F</span>
+          </div>
+        </div>
+
+        <h1 className="text-2xl font-bold text-center mb-1" style={{ color: '#6B9BAF' }}>
+          Finnly
+        </h1>
+        <p className="text-center text-sm mb-6" style={{ color: '#5A5A5A' }}>
+          Cross The Finnish Line
+        </p>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
@@ -55,7 +72,7 @@ export default function LoginPage() {
         )}
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: '#2C2C2C' }}>
             Email
           </label>
           <input
@@ -68,7 +85,7 @@ export default function LoginPage() {
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1" style={{ color: '#2C2C2C' }}>
             Password
           </label>
           <input
@@ -84,7 +101,8 @@ export default function LoginPage() {
         <button
           onClick={handleLogin}
           disabled={loading || !email || !password}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full text-white py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+          style={{ backgroundColor: '#6B9BAF' }}
         >
           {loading ? 'Signing in…' : 'Sign In'}
         </button>

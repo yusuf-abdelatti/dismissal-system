@@ -39,7 +39,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: '#EAE5DF' }}>
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -50,13 +50,14 @@ export default function AdminDashboard() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static z-30 h-full w-64 bg-gray-900 text-white flex flex-col transition-transform duration-300 ${
+        className={`fixed lg:static z-30 h-full w-64 text-white flex flex-col transition-transform duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
+        style={{ backgroundColor: '#6B9BAF' }}
       >
-        <div className="p-6 border-b border-gray-800">
-          <h1 className="text-lg font-bold text-white">Nursery Admin</h1>
-          <p className="text-gray-500 text-xs mt-1 truncate">{user?.email}</p>
+        <div className="p-6 border-b border-white/20">
+          <h1 className="text-lg font-bold text-white">Finnly Admin</h1>
+          <p className="text-xs mt-1 truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>{user?.email}</p>
         </div>
 
         <nav className="flex-1 p-3 overflow-y-auto">
@@ -66,10 +67,13 @@ export default function AdminDashboard() {
               to={`/admin/${item.path}`}
               className={({ isActive }) =>
                 `block px-4 py-3 rounded-lg mb-1 text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  isActive ? 'text-white' : 'hover:bg-white/10 hover:text-white'
                 }`
+              }
+              style={({ isActive }) =>
+                isActive
+                  ? { backgroundColor: '#C49A45' }
+                  : { color: 'rgba(255,255,255,0.75)' }
               }
               onClick={() => setSidebarOpen(false)}
             >
@@ -78,10 +82,11 @@ export default function AdminDashboard() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-4 border-t border-white/20">
           <button
             onClick={logout}
-            className="w-full px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg text-sm text-left transition-colors"
+            className="w-full px-4 py-2 hover:text-white hover:bg-white/10 rounded-lg text-sm text-left transition-colors"
+            style={{ color: 'rgba(255,255,255,0.75)' }}
           >
             Sign Out
           </button>
@@ -91,16 +96,16 @@ export default function AdminDashboard() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-auto">
         {/* Mobile top bar */}
-        <header className="lg:hidden bg-white border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+        <header className="lg:hidden border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10" style={{ backgroundColor: '#EAE5DF', borderColor: '#d4cfc8' }}>
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg hover:bg-gray-100"
+            className="p-2 rounded-lg hover:bg-black/5"
             aria-label="Open menu"
           >
             <Hamburger />
           </button>
-          <span className="font-semibold text-gray-800 text-sm">
-            Nursery Admin
+          <span className="font-semibold text-sm" style={{ color: '#2C2C2C' }}>
+            Finnly Admin
           </span>
         </header>
 
