@@ -63,7 +63,15 @@ Deno.serve(async (req) => {
         await webPush.sendNotification(parsed, JSON.stringify(notificationPayload))
         console.log('Push sent OK')
       } catch (e: any) {
-        console.error('Push failed:', e.message)
+        console.error('Push failed:', e.statusCode, e.message)
+        // Remove expired/invalid subscriptions (404 = not found, 410 = unsubscribed)
+        if (e.statusCode === 404 || e.statusCode === 410) {
+          await supabase
+            .from('push_subscriptions')
+            .delete()
+            .eq('endpoint', parsed.endpoint)
+          console.log('Removed expired subscription:', parsed.endpoint.substring(0, 40))
+        }
       }
     }
 

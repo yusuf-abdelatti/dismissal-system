@@ -41,12 +41,23 @@ Deno.serve(async (req) => {
     if (!sub) return new Response('ok')
 
     const parsed = JSON.parse(sub.subscription)
-    await webPush.sendNotification(parsed, JSON.stringify({
-      title: '🌟 Your child is ready!',
-      body: `${firstName} is ready and waiting for you — come on over 💛`,
-    }))
-
-    console.log('Parent push sent OK')
+    try {
+      await webPush.sendNotification(parsed, JSON.stringify({
+        title: '🌟 Your child is ready!',
+        body: `${firstName} is ready and waiting for you — come on over 💛`,
+      }))
+      console.log('Parent push sent OK')
+    } catch (e: any) {
+      console.error('Push failed:', e.statusCode, e.message)
+      // Remove expired/invalid subscriptions (404 = not found, 410 = unsubscribed)
+      if (e.statusCode === 404 || e.statusCode === 410) {
+        await supabase
+          .from('push_subscriptions')
+          .delete()
+          .eq('endpoint', parsed.endpoint)
+        console.log('Removed expired subscription:', parsed.endpoint.substring(0, 40))
+      }
+    }
     return new Response('ok')
   } catch (err) {
     console.error('Function error:', String(err))

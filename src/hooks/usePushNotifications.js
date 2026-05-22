@@ -57,12 +57,17 @@ export function usePushNotifications(userId) {
         applicationServerKey: urlBase64ToUint8Array(vapidKey),
       })
 
+      const subscriptionJson = pushSubscription.toJSON()
+
       const { error: dbError } = await supabase
         .from('push_subscriptions')
         .upsert({
           user_id: userId,
-          subscription: JSON.stringify(pushSubscription),
+          subscription: JSON.stringify(subscriptionJson),
+          endpoint: subscriptionJson.endpoint,
           updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,endpoint'
         })
 
       if (dbError) {
