@@ -46,7 +46,7 @@ function CountdownBadge({ requestedAt, status }) {
 
 function RequestCard({ request, onMarkReady, onMarkDelivered }) {
   const child = request.children
-  const classColor = child?.classes?.color || '#6B7280'
+  const classColor = child?.classes?.color || '#6B9BAF'
   const isArrived = request.status === 'arrived'
   const isReady = request.status === 'ready'
 

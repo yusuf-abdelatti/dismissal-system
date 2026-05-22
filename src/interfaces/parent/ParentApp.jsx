@@ -156,7 +156,7 @@ export default function ParentApp() {
     )
   }
 
-  const accentColor = child?.classes?.color || '#3B82F6'
+  const accentColor = child?.classes?.color || '#6B9BAF'
   const firstName = child?.full_name?.split(' ')[0] || child?.full_name || ''
 
   // State E — goodbye after delivered/cleared
