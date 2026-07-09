@@ -6,6 +6,7 @@ import ParentApp from './interfaces/parent/ParentApp'
 import DisplayScreen from './interfaces/display/DisplayScreen'
 import StaffApp from './interfaces/staff/StaffApp'
 import AdminDashboard from './interfaces/admin/AdminDashboard'
+import PWAInstallBanner from './components/PWAInstallBanner'
 
 const ROLE_REDIRECTS = {
   admin: '/admin',
@@ -81,6 +82,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppRoutes />
+        <PWAInstallBanner />
       </AuthProvider>
     </BrowserRouter>
   )
