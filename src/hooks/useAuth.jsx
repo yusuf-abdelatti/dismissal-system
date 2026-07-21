@@ -6,18 +6,21 @@ import { resolveRoleAndNursery } from './resolveTenant'
 const AuthContext = createContext(null)
 const CACHE_KEY = 'userRoleInfo'
 
-// localStorage is already origin-scoped, and each nursery subdomain is its
-// own origin, so this cache can never leak across nurseries.
-function readCache() {
+// Keyed to the userId it was resolved for, since more than one account can
+// sign in from the same browser/origin (e.g. testing on a shared apex domain
+// before wildcard subdomains exist) — without this check a stale cache from
+// a previous account would get reused for whoever logs in next.
+function readCacheFor(userId) {
   try {
-    return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null')
+    const parsed = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null')
+    return parsed && parsed.userId === userId ? parsed : null
   } catch {
     return null
   }
 }
 
-function writeCache(info) {
-  localStorage.setItem(CACHE_KEY, JSON.stringify(info))
+function writeCache(userId, info) {
+  localStorage.setItem(CACHE_KEY, JSON.stringify({ userId, ...info }))
 }
 
 function clearCache() {
@@ -31,10 +34,9 @@ export function AuthProvider({ children }) {
     tenantRef.current = tenant
   }, [tenant])
 
-  const cached = readCache()
   const [user, setUser] = useState(null)
-  const [role, setRole] = useState(cached?.role ?? null)
-  const [nurseryId, setNurseryId] = useState(cached?.nurseryId ?? null)
+  const [role, setRole] = useState(null)
+  const [nurseryId, setNurseryId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [tenantMismatch, setTenantMismatch] = useState(false)
 
@@ -49,7 +51,8 @@ export function AuthProvider({ children }) {
           if (session?.user) {
             setUser(session.user)
 
-            let info = readCache()
+            const cached = readCacheFor(session.user.id)
+            let info = cached ? { role: cached.role, nurseryId: cached.nurseryId } : null
             if (!info) {
               info = await resolveRoleAndNursery(session.user.id)
             }
@@ -68,7 +71,7 @@ export function AuthProvider({ children }) {
             setTenantMismatch(false)
             setRole(info.role)
             setNurseryId(info.nurseryId)
-            writeCache(info)
+            writeCache(session.user.id, info)
           } else {
             setUser(null)
             setRole(null)
