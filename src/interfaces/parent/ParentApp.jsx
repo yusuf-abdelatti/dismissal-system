@@ -101,7 +101,7 @@ export default function ParentApp() {
 
     const { data, error: insertError } = await supabase
       .from('pickup_requests')
-      .insert({ child_id: child.id, status: 'requested', date: today })
+      .insert({ child_id: child.id, nursery_id: child.nursery_id, status: 'requested', date: today })
       .select()
       .single()
 

@@ -32,16 +32,33 @@ Deno.serve(async (req) => {
   const { data: { user }, error: userErr } = await callerClient.auth.getUser()
   if (userErr || !user) return json({ error: 'Invalid session' }, 401)
 
-  const { data: profile } = await callerClient
-    .from('staff_profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle()
+  const [{ data: profile }, { data: superAdminRow }] = await Promise.all([
+    callerClient.from('staff_profiles').select('role, nursery_id').eq('id', user.id).maybeSingle(),
+    callerClient.from('super_admins').select('id').eq('id', user.id).maybeSingle(),
+  ])
 
-  if (profile?.role !== 'admin') return json({ error: 'Forbidden' }, 403)
+  const isSuperAdmin = !!superAdminRow
+  const isNurseryAdmin = profile?.role === 'admin'
+  if (!isSuperAdmin && !isNurseryAdmin) return json({ error: 'Forbidden' }, 403)
 
-  // Only reached once the caller is confirmed to be an admin.
+  // Nursery admins only ever operate within their own nursery.
+  const callerNurseryId = profile?.nursery_id ?? null
+
   const adminClient = createClient(supabaseUrl, serviceRoleKey)
+
+  // Returns the set of user ids that belong to the given nursery (staff +
+  // parents), used to scope list/delete for non-super-admin callers so one
+  // nursery's admin can never see or touch another nursery's accounts.
+  async function nurseryUserIds(nurseryId: string) {
+    const [{ data: staffRows }, { data: childRows }] = await Promise.all([
+      adminClient.from('staff_profiles').select('id').eq('nursery_id', nurseryId),
+      adminClient.from('children').select('parent_user_id').eq('nursery_id', nurseryId),
+    ])
+    return new Set([
+      ...(staffRows || []).map((s: any) => s.id),
+      ...(childRows || []).map((c: any) => c.parent_user_id).filter(Boolean),
+    ])
+  }
 
   try {
     const { action, ...params } = await req.json()
@@ -49,8 +66,14 @@ Deno.serve(async (req) => {
     if (action === 'list') {
       const { data, error } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
       if (error) return json({ error: error.message }, 400)
-      const users = data.users.map((u) => ({ id: u.id, email: u.email }))
-      return json({ users })
+
+      let users = data.users
+      if (!isSuperAdmin) {
+        const allowed = await nurseryUserIds(callerNurseryId!)
+        users = users.filter((u) => allowed.has(u.id))
+      }
+
+      return json({ users: users.map((u) => ({ id: u.id, email: u.email })) })
     }
 
     if (action === 'create') {
@@ -69,6 +92,11 @@ Deno.serve(async (req) => {
     if (action === 'delete') {
       const { userId } = params
       if (!userId) return json({ error: 'userId is required' }, 400)
+
+      if (!isSuperAdmin) {
+        const allowed = await nurseryUserIds(callerNurseryId!)
+        if (!allowed.has(userId)) return json({ error: 'Forbidden' }, 403)
+      }
 
       const { error } = await adminClient.auth.admin.deleteUser(userId)
       if (error) return json({ error: error.message }, 400)

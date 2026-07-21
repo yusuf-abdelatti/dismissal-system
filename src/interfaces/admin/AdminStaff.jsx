@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
+import { useAuth } from '../../hooks/useAuth'
 import { listUsers, createUser, deleteUser } from '../../adminUsers'
 
 function Modal({ title, onClose, children }) {
@@ -25,6 +26,7 @@ const ROLES = ['staff', 'admin', 'display']
 const ROLE_LABELS = { staff: 'Staff', admin: 'Admin', display: 'Display Screen' }
 
 export default function AdminStaff() {
+  const { nurseryId } = useAuth()
   const [staffList, setStaffList] = useState([])
   const [classes, setClasses] = useState([])
   const [loading, setLoading] = useState(true)
@@ -103,6 +105,7 @@ export default function AdminStaff() {
       .from('staff_profiles')
       .insert({
         id: newUser.id,
+        nursery_id: nurseryId,
         display_name: form.display_name.trim(),
         role: form.role,
         class_id: form.class_id || null,

@@ -6,6 +6,7 @@ const ROLE_REDIRECTS = {
   staff: '/staff',
   display: '/display',
   parent: '/parent',
+  super_admin: '/super-admin',
 }
 
 const Spinner = () => (

@@ -7,6 +7,7 @@ import ParentApp from './interfaces/parent/ParentApp'
 import DisplayScreen from './interfaces/display/DisplayScreen'
 import StaffApp from './interfaces/staff/StaffApp'
 import AdminDashboard from './interfaces/admin/AdminDashboard'
+import SuperAdminDashboard from './interfaces/superadmin/SuperAdminDashboard'
 import PWAInstallBanner from './components/PWAInstallBanner'
 
 const ROLE_REDIRECTS = {
@@ -14,6 +15,7 @@ const ROLE_REDIRECTS = {
   staff: '/staff',
   display: '/display',
   parent: '/parent',
+  super_admin: '/super-admin',
 }
 
 function RootRedirect() {
@@ -69,6 +71,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/super-admin/*"
+        element={
+          <ProtectedRoute allowedRoles={['super_admin']}>
+            <SuperAdminDashboard />
           </ProtectedRoute>
         }
       />

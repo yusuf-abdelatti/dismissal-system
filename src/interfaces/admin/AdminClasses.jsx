@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
+import { useAuth } from '../../hooks/useAuth'
 
 function Modal({ title, onClose, children }) {
   return (
@@ -23,6 +24,7 @@ function Modal({ title, onClose, children }) {
 const EMPTY_FORM = { name: '', color: '#6B7280' }
 
 export default function AdminClasses() {
+  const { nurseryId } = useAuth()
   const [classes, setClasses] = useState([])
   const [childCounts, setChildCounts] = useState({})
   const [loading, setLoading] = useState(true)
@@ -101,7 +103,7 @@ export default function AdminClasses() {
     } else {
       const { error: err } = await supabase
         .from('classes')
-        .insert({ name: form.name.trim(), color: form.color })
+        .insert({ name: form.name.trim(), color: form.color, nursery_id: nurseryId })
       if (err) { setError('Something went wrong. Please try again.'); setSaving(false); return }
     }
 

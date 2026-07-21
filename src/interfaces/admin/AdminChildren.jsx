@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
+import { useAuth } from '../../hooks/useAuth'
 import { listUsers } from '../../adminUsers'
 
 function Modal({ title, onClose, children }) {
@@ -24,6 +25,7 @@ function Modal({ title, onClose, children }) {
 const EMPTY_FORM = { full_name: '', class_id: '', parent_user_id: '' }
 
 export default function AdminChildren() {
+  const { nurseryId } = useAuth()
   const [children, setChildren] = useState([])
   const [classes, setClasses] = useState([])
   const [parents, setParents] = useState([]) // {id, email}
@@ -120,7 +122,7 @@ export default function AdminChildren() {
         .eq('id', editing.id)
       if (err) { setError('Something went wrong. Please try again.'); setSaving(false); return }
     } else {
-      const { error: err } = await supabase.from('children').insert(payload)
+      const { error: err } = await supabase.from('children').insert({ ...payload, nursery_id: nurseryId })
       if (err) { setError('Something went wrong. Please try again.'); setSaving(false); return }
     }
 

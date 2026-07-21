@@ -4,6 +4,16 @@ import { supabase } from '../supabaseClient'
 // LoginPage.jsx (fresh sign-in) so both paths enforce the same
 // account-belongs-to-this-nursery check the same way.
 export async function resolveRoleAndNursery(userId) {
+  const { data: superAdminRow } = await supabase
+    .from('super_admins')
+    .select('id')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (superAdminRow) {
+    return { role: 'super_admin', nurseryId: null }
+  }
+
   const { data: staffProfile } = await supabase
     .from('staff_profiles')
     .select('role, nursery_id')
