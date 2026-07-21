@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../hooks/useAuth'
+import { useTenant } from '../../hooks/useTenant'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
 
 export default function ParentApp() {
   const { user } = useAuth()
+  const { tenant } = useTenant()
   const [child, setChild] = useState(null)
   const [request, setRequest] = useState(null)
   const [loadingData, setLoadingData] = useState(true)
@@ -134,7 +136,7 @@ export default function ParentApp() {
 
   if (loadingData) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#EAE5DF' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: tenant.backgroundColor }}>
         <div className="text-gray-500 text-lg">Loading…</div>
       </div>
     )
@@ -142,7 +144,7 @@ export default function ParentApp() {
 
   if (error && !child) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6" style={{ backgroundColor: '#EAE5DF' }}>
+      <div className="min-h-screen flex items-center justify-center px-6" style={{ backgroundColor: tenant.backgroundColor }}>
         <div className="text-center">
           <p className="text-red-600 text-lg mb-4">{error}</p>
           <button
@@ -156,7 +158,7 @@ export default function ParentApp() {
     )
   }
 
-  const accentColor = child?.classes?.color || '#6B9BAF'
+  const accentColor = child?.classes?.color || tenant.primaryColor
   const firstName = child?.full_name?.split(' ')[0] || child?.full_name || ''
 
   // State E — goodbye after delivered/cleared
@@ -173,7 +175,7 @@ export default function ParentApp() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#EAE5DF' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: tenant.backgroundColor }}>
       {/* Header */}
       <div
         className="px-6 pt-12 pb-8 text-white"
@@ -215,7 +217,7 @@ export default function ParentApp() {
                   onClick={subscribe}
                   disabled={status === 'requesting'}
                   className="ml-3 text-white px-3 py-2 rounded-lg text-sm font-medium disabled:opacity-50 whitespace-nowrap"
-                  style={{ backgroundColor: '#C49A45' }}
+                  style={{ backgroundColor: tenant.secondaryColor }}
                 >
                   {status === 'requesting' ? '…' : 'Enable'}
                 </button>
@@ -229,7 +231,7 @@ export default function ParentApp() {
               onClick={requestPickup}
               disabled={actionLoading}
               className="w-full text-white font-semibold text-xl py-5 rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
-              style={{ backgroundColor: '#6B9BAF', minHeight: '72px' }}
+              style={{ backgroundColor: tenant.primaryColor, minHeight: '72px' }}
             >
               {actionLoading ? 'Sending…' : 'Request Pickup'}
             </button>
@@ -254,7 +256,7 @@ export default function ParentApp() {
               onClick={markArrived}
               disabled={actionLoading}
               className="w-full text-white font-semibold text-xl py-5 rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
-              style={{ backgroundColor: '#C49A45', minHeight: '72px' }}
+              style={{ backgroundColor: tenant.secondaryColor, minHeight: '72px' }}
             >
               {actionLoading ? 'Updating…' : 'I Have Arrived'}
             </button>
@@ -264,7 +266,7 @@ export default function ParentApp() {
         {/* State C — ready, warm message */}
         {request && request.status === 'ready' && (
           <div className="w-full max-w-sm text-center">
-            <div className="rounded-2xl p-6 mb-6" style={{ backgroundColor: '#FFFBEB', border: '1px solid #C49A45' }}>
+            <div className="rounded-2xl p-6 mb-6" style={{ backgroundColor: '#FFFBEB', border: `1px solid ${tenant.secondaryColor}` }}>
               <div className="text-4xl mb-3">🌟</div>
               <p className="font-bold text-gray-800 text-xl mb-2">
                 {firstName} is ready and waiting for you!
@@ -280,7 +282,7 @@ export default function ParentApp() {
               onClick={markArrived}
               disabled={actionLoading}
               className="w-full text-white font-semibold text-xl py-5 rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
-              style={{ backgroundColor: '#C49A45', minHeight: '72px' }}
+              style={{ backgroundColor: tenant.secondaryColor, minHeight: '72px' }}
             >
               {actionLoading ? 'Updating…' : 'I Have Arrived'}
             </button>

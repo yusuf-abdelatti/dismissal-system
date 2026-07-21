@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
+import { useTenant } from '../hooks/useTenant'
 
-const DISMISSED_KEY = 'finnly-pwa-dismissed'
+const DISMISSED_KEY = 'pwa-install-dismissed'
 
 function getDevice() {
   const ua = navigator.userAgent
@@ -51,6 +52,7 @@ const IOS_STEPS = [
 
 export default function PWAInstallBanner() {
   const { pathname } = useLocation()
+  const { tenant } = useTenant()
   const [visible, setVisible] = useState(false)
   const [mounted, setMounted] = useState(false) // for slide-up animation
   const [device, setDevice] = useState('desktop')
@@ -131,23 +133,23 @@ export default function PWAInstallBanner() {
         <div className="flex items-center gap-3 px-4 pt-4 pb-3">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
-            style={{ backgroundColor: '#6B9BAF' }}
+            style={{ backgroundColor: tenant.primaryColor }}
           >
             <img
-              src="/finnly-logo.png"
-              alt="Finnly"
+              src={tenant.logoUrl}
+              alt={tenant.name}
               className="w-8 h-8 object-contain"
               onError={(e) => {
                 e.target.style.display = 'none'
                 e.target.parentElement.querySelector('span').style.display = 'block'
               }}
             />
-            <span className="text-white font-bold text-lg hidden">F</span>
+            <span className="text-white font-bold text-lg hidden">{tenant.name.charAt(0)}</span>
           </div>
 
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm leading-tight" style={{ color: '#2C2C2C' }}>
-              Install Finnly
+              Install {tenant.name}
             </p>
             <p className="text-xs mt-0.5 leading-tight" style={{ color: '#5A5A5A' }}>
               {showSteps
@@ -160,7 +162,7 @@ export default function PWAInstallBanner() {
             onClick={dismiss}
             aria-label="Dismiss"
             className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-lg leading-none transition-opacity hover:opacity-70"
-            style={{ color: '#5A5A5A', backgroundColor: '#EAE5DF' }}
+            style={{ color: '#5A5A5A', backgroundColor: tenant.backgroundColor }}
           >
             ×
           </button>
@@ -171,7 +173,7 @@ export default function PWAInstallBanner() {
           <div className="px-4 pb-1">
             <div
               className="rounded-xl p-3 mb-3"
-              style={{ backgroundColor: '#EAE5DF' }}
+              style={{ backgroundColor: tenant.backgroundColor }}
             >
               {IOS_STEPS.map((step, i) => (
                 <div
@@ -181,7 +183,7 @@ export default function PWAInstallBanner() {
                 >
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
-                    style={{ backgroundColor: '#6B9BAF', color: 'white', minWidth: '24px' }}
+                    style={{ backgroundColor: tenant.primaryColor, color: 'white', minWidth: '24px' }}
                   >
                     {step.n}
                   </div>
@@ -200,7 +202,7 @@ export default function PWAInstallBanner() {
             <button
               onClick={handleInstall}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity active:opacity-80"
-              style={{ backgroundColor: '#6B9BAF' }}
+              style={{ backgroundColor: tenant.primaryColor }}
             >
               Install
             </button>
@@ -213,7 +215,7 @@ export default function PWAInstallBanner() {
             <button
               onClick={handleInstall}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity active:opacity-80"
-              style={{ backgroundColor: '#6B9BAF' }}
+              style={{ backgroundColor: tenant.primaryColor }}
             >
               How to Install
             </button>
@@ -225,7 +227,7 @@ export default function PWAInstallBanner() {
             <button
               onClick={dismiss}
               className="w-full py-2.5 rounded-xl text-sm font-semibold transition-opacity active:opacity-80"
-              style={{ backgroundColor: '#EAE5DF', color: '#2C2C2C' }}
+              style={{ backgroundColor: tenant.backgroundColor, color: '#2C2C2C' }}
             >
               Got it
             </button>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../supabaseClient'
+import { useTenant } from '../../hooks/useTenant'
 import { usePickupRequests } from '../../hooks/usePickupRequests'
 import { sortRequests } from '../../utils/sorting'
 import { playNewRequestSound, playArrivalSound } from '../../utils/sound'
@@ -34,7 +35,7 @@ function LiveClock() {
   )
 }
 
-function LiveBoard({ audioCtx, branchName }) {
+function LiveBoard({ audioCtx, tenant }) {
   const { requests, loading } = usePickupRequests()
   const [tick, setTick] = useState(0)
   const seenRef = useRef({}) // id -> last known status
@@ -76,10 +77,12 @@ function LiveBoard({ audioCtx, branchName }) {
       <div className="flex justify-between items-center px-8 py-5 border-b border-gray-800">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
-            <img src="/finnly-logo.png" alt="Finnly" className="h-8 w-auto" />
-            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#6B9BAF' }}>Finnly</span>
+            <img src={tenant.logoUrl} alt={tenant.name} className="h-8 w-auto" />
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: tenant.primaryColor }}>
+              {tenant.name}
+            </span>
           </div>
-          <div className="text-2xl font-bold text-white">{branchName}</div>
+          <div className="text-2xl font-bold text-white">{tenant.name}</div>
           <div className="text-gray-500 text-xs mt-0.5 uppercase tracking-widest">
             Live Dismissal Board
           </div>
@@ -111,35 +114,40 @@ function LiveBoard({ audioCtx, branchName }) {
 }
 
 export default function DisplayScreen() {
+  const { tenant: baseTenant } = useTenant()
+  const [tenant, setTenant] = useState(baseTenant)
   const [activated, setActivated] = useState(false)
   const [audioCtx, setAudioCtx] = useState(null)
-  const [branchName, setBranchName] = useState('Finnly')
 
   useEffect(() => {
-    supabase
-      .from('settings')
-      .select('branch_name')
-      .eq('id', 1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.branch_name) setBranchName(data.branch_name)
-      })
+    setTenant(baseTenant)
+  }, [baseTenant])
+
+  // Live-sync branding if the nursery admin edits name/colors mid-day —
+  // same behavior the old settings-table subscription provided.
+  useEffect(() => {
+    if (!baseTenant?.id) return
 
     const channel = supabase
-      .channel('settings_changes')
+      .channel(`nursery_${baseTenant.id}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'settings' },
+        { event: 'UPDATE', schema: 'public', table: 'nurseries', filter: `id=eq.${baseTenant.id}` },
         (payload) => {
-          if (payload.new?.branch_name) {
-            setBranchName(payload.new.branch_name)
-          }
+          const row = payload.new
+          if (!row) return
+          setTenant((t) => ({
+            ...t,
+            name: row.name ?? t.name,
+            logoUrl: row.logo_url ?? t.logoUrl,
+            primaryColor: row.primary_color ?? t.primaryColor,
+          }))
         }
       )
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [])
+  }, [baseTenant?.id])
 
   const activate = async () => {
     const ctx = new AudioContext()
@@ -161,14 +169,16 @@ export default function DisplayScreen() {
         onClick={activate}
       >
         <div className="text-center px-8">
-          <div className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#6B9BAF' }}>Finnly</div>
-          <h1 className="text-white text-4xl font-bold mb-2">{branchName}</h1>
+          <div className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: tenant.primaryColor }}>
+            {tenant.name}
+          </div>
+          <h1 className="text-white text-4xl font-bold mb-2">{tenant.name}</h1>
           <p className="text-gray-600 text-sm mb-12 uppercase tracking-widest">
             Dismissal System
           </p>
           <button
             className="text-white text-2xl font-semibold px-16 py-7 rounded-2xl transition-opacity shadow-2xl"
-            style={{ backgroundColor: '#6B9BAF' }}
+            style={{ backgroundColor: tenant.primaryColor }}
             onClick={(e) => {
               e.stopPropagation()
               activate()
@@ -184,5 +194,5 @@ export default function DisplayScreen() {
     )
   }
 
-  return <LiveBoard audioCtx={audioCtx} branchName={branchName} />
+  return <LiveBoard audioCtx={audioCtx} tenant={tenant} />
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../hooks/useAuth'
+import { useTenant } from '../../hooks/useTenant'
 import { usePickupRequests } from '../../hooks/usePickupRequests'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
 import { sortRequests } from '../../utils/sorting'
@@ -45,8 +46,9 @@ function CountdownBadge({ requestedAt, status }) {
 }
 
 function RequestCard({ request, onMarkReady, onMarkDelivered }) {
+  const { tenant } = useTenant()
   const child = request.children
-  const classColor = child?.classes?.color || '#6B9BAF'
+  const classColor = child?.classes?.color || tenant.primaryColor
   const isArrived = request.status === 'arrived'
   const isReady = request.status === 'ready'
 
@@ -84,7 +86,7 @@ function RequestCard({ request, onMarkReady, onMarkDelivered }) {
           style={
             isReady || isArrived
               ? { backgroundColor: '#D1FAE5', color: '#065F46' }
-              : { backgroundColor: '#6B9BAF', color: 'white' }
+              : { backgroundColor: tenant.primaryColor, color: 'white' }
           }
         >
           {isReady ? '✓ Ready' : 'Mark Ready'}
@@ -103,6 +105,7 @@ function RequestCard({ request, onMarkReady, onMarkDelivered }) {
 
 export default function StaffApp() {
   const { user } = useAuth()
+  const { tenant } = useTenant()
   const [staffName, setStaffName] = useState('')
   const [assignedClassId, setAssignedClassId] = useState(null)
   const [classes, setClasses] = useState([])
@@ -170,8 +173,8 @@ export default function StaffApp() {
   const sorted = sortRequests(filtered)
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#EAE5DF' }}>
-      <div className="px-4 py-3 flex items-center gap-3" style={{ backgroundColor: '#6B9BAF' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: tenant.backgroundColor }}>
+      <div className="px-4 py-3 flex items-center gap-3" style={{ backgroundColor: tenant.primaryColor }}>
         <div className="flex-1">
           <span className="font-semibold text-white">{staffName || 'Staff'}</span>
         </div>
@@ -182,9 +185,9 @@ export default function StaffApp() {
           className="rounded-lg px-3 py-2 text-sm focus:outline-none"
           style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
         >
-          <option value="" style={{ backgroundColor: '#6B9BAF' }}>All Classes</option>
+          <option value="" style={{ backgroundColor: tenant.primaryColor }}>All Classes</option>
           {classes.map((cls) => (
-            <option key={cls.id} value={cls.id} style={{ backgroundColor: '#6B9BAF' }}>
+            <option key={cls.id} value={cls.id} style={{ backgroundColor: tenant.primaryColor }}>
               {cls.name}
             </option>
           ))}
@@ -200,7 +203,7 @@ export default function StaffApp() {
       </div>
 
       {isSupported && status !== 'subscribed' && status !== 'denied' && (
-        <div className="border-b px-4 py-3 flex items-center justify-between" style={{ backgroundColor: '#FFFBEB', borderColor: '#C49A45' }}>
+        <div className="border-b px-4 py-3 flex items-center justify-between" style={{ backgroundColor: '#FFFBEB', borderColor: tenant.secondaryColor }}>
           <span className="text-sm" style={{ color: '#92400E' }}>
             Enable notifications to get alerted for new pickup requests
           </span>
@@ -208,7 +211,7 @@ export default function StaffApp() {
             onClick={subscribe}
             disabled={status === 'requesting'}
             className="ml-4 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 whitespace-nowrap"
-            style={{ backgroundColor: '#C49A45' }}
+            style={{ backgroundColor: tenant.secondaryColor }}
           >
             {status === 'requesting' ? 'Enabling…' : 'Enable'}
           </button>

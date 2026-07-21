@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
+import { TenantProvider } from './hooks/useTenant'
 import LoginPage from './components/LoginPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import ParentApp from './interfaces/parent/ParentApp'
@@ -80,10 +81,12 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-        <PWAInstallBanner />
-      </AuthProvider>
+      <TenantProvider>
+        <AuthProvider>
+          <AppRoutes />
+          <PWAInstallBanner />
+        </AuthProvider>
+      </TenantProvider>
     </BrowserRouter>
   )
 }

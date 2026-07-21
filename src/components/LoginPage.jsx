@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { useTenant } from '../hooks/useTenant'
+import { resolveRoleAndNursery } from '../hooks/resolveTenant'
 
 const ROLE_REDIRECTS = {
   admin: '/admin',
@@ -10,6 +12,7 @@ const ROLE_REDIRECTS = {
 }
 
 export default function LoginPage() {
+  const { tenant } = useTenant()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -31,36 +34,39 @@ export default function LoginPage() {
       setLoading(false)
       return
     }
-    const { data: staffData } = await supabase
-      .from('staff_profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .single()
 
-    const role = staffData?.role ?? 'parent'
-    navigate(ROLE_REDIRECTS[role] ?? '/parent', { replace: true })
+    const info = await resolveRoleAndNursery(data.user.id)
+
+    if (tenant?.id && info.nurseryId && info.nurseryId !== tenant.id) {
+      await supabase.auth.signOut()
+      setError(`This account isn't part of ${tenant.name}.`)
+      setLoading(false)
+      return
+    }
+
+    navigate(ROLE_REDIRECTS[info.role] ?? '/parent', { replace: true })
     setLoading(false)
   }
 
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ backgroundColor: '#EAE5DF' }}
+      style={{ backgroundColor: tenant.backgroundColor }}
     >
       <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-xl">
         <div className="flex justify-center mb-6">
           <img
-            src="/finnly-logo.png"
-            alt="Finnly"
+            src={tenant.logoUrl}
+            alt={tenant.name}
             className="w-32 h-auto mx-auto mb-2"
           />
         </div>
 
-        <h1 className="text-2xl font-bold text-center mb-1" style={{ color: '#6B9BAF' }}>
-          Finnly
+        <h1 className="text-2xl font-bold text-center mb-1" style={{ color: tenant.primaryColor }}>
+          {tenant.name}
         </h1>
         <p className="text-center text-sm mb-6" style={{ color: '#5A5A5A' }}>
-          Cross The Finnish Line
+          Dismissal made simple
         </p>
 
         {error && (
@@ -100,7 +106,7 @@ export default function LoginPage() {
           onClick={handleLogin}
           disabled={loading || !email || !password}
           className="w-full text-white py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-          style={{ backgroundColor: '#6B9BAF' }}
+          style={{ backgroundColor: tenant.primaryColor }}
         >
           {loading ? 'Signing in…' : 'Sign In'}
         </button>

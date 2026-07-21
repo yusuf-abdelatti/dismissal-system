@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../hooks/useAuth'
+import { useTenant } from '../../hooks/useTenant'
 import AdminChildren from './AdminChildren'
 import AdminClasses from './AdminClasses'
 import AdminParents from './AdminParents'
@@ -31,6 +32,7 @@ function Hamburger() {
 export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user } = useAuth()
+  const { tenant } = useTenant()
   const navigate = useNavigate()
 
   const logout = async () => {
@@ -39,7 +41,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: '#EAE5DF' }}>
+    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: tenant.backgroundColor }}>
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -53,15 +55,15 @@ export default function AdminDashboard() {
         className={`fixed lg:static z-30 h-full w-64 text-white flex flex-col transition-transform duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
-        style={{ backgroundColor: '#6B9BAF' }}
+        style={{ backgroundColor: tenant.primaryColor }}
       >
         <div className="p-6 border-b border-white/20">
           <img
-            src="/finnly-logo.png"
-            alt="Finnly"
+            src={tenant.logoUrl}
+            alt={tenant.name}
             className="w-36 h-auto mb-6 mx-auto"
           />
-          <h1 className="text-lg font-bold text-white">Finnly Admin</h1>
+          <h1 className="text-lg font-bold text-white">{tenant.name} Admin</h1>
           <p className="text-xs mt-1 truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>{user?.email}</p>
         </div>
 
@@ -77,7 +79,7 @@ export default function AdminDashboard() {
               }
               style={({ isActive }) =>
                 isActive
-                  ? { backgroundColor: '#C49A45' }
+                  ? { backgroundColor: tenant.secondaryColor }
                   : { color: 'rgba(255,255,255,0.75)' }
               }
               onClick={() => setSidebarOpen(false)}
@@ -101,7 +103,7 @@ export default function AdminDashboard() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-auto">
         {/* Mobile top bar */}
-        <header className="lg:hidden border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10" style={{ backgroundColor: '#EAE5DF', borderColor: '#d4cfc8' }}>
+        <header className="lg:hidden border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10" style={{ backgroundColor: tenant.backgroundColor, borderColor: '#d4cfc8' }}>
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 rounded-lg hover:bg-black/5"
@@ -110,7 +112,7 @@ export default function AdminDashboard() {
             <Hamburger />
           </button>
           <span className="font-semibold text-sm" style={{ color: '#2C2C2C' }}>
-            Finnly Admin
+            {tenant.name} Admin
           </span>
         </header>
 

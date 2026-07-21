@@ -1,31 +1,42 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabaseClient'
+import { useTenant } from './useTenant'
+import { resolveRoleAndNursery } from './resolveTenant'
 
 const AuthContext = createContext(null)
+const CACHE_KEY = 'userRoleInfo'
 
-async function fetchRole(userId) {
-  const cached = localStorage.getItem('userRole')
-  if (cached) return cached
-
+// localStorage is already origin-scoped, and each nursery subdomain is its
+// own origin, so this cache can never leak across nurseries.
+function readCache() {
   try {
-    const { data } = await supabase
-      .from('staff_profiles')
-      .select('role')
-      .eq('id', userId)
-      .maybeSingle()
-
-    const role = data?.role ?? 'parent'
-    localStorage.setItem('userRole', role)
-    return role
+    return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null')
   } catch {
-    return localStorage.getItem('userRole') ?? 'parent'
+    return null
   }
 }
 
+function writeCache(info) {
+  localStorage.setItem(CACHE_KEY, JSON.stringify(info))
+}
+
+function clearCache() {
+  localStorage.removeItem(CACHE_KEY)
+}
+
 export function AuthProvider({ children }) {
+  const { tenant } = useTenant()
+  const tenantRef = useRef(tenant)
+  useEffect(() => {
+    tenantRef.current = tenant
+  }, [tenant])
+
+  const cached = readCache()
   const [user, setUser] = useState(null)
-  const [role, setRole] = useState(() => localStorage.getItem('userRole') ?? null)
+  const [role, setRole] = useState(cached?.role ?? null)
+  const [nurseryId, setNurseryId] = useState(cached?.nurseryId ?? null)
   const [loading, setLoading] = useState(true)
+  const [tenantMismatch, setTenantMismatch] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -37,12 +48,32 @@ export function AuthProvider({ children }) {
         try {
           if (session?.user) {
             setUser(session.user)
-            const r = await fetchRole(session.user.id)
-            if (mounted) setRole(r)
+
+            let info = readCache()
+            if (!info) {
+              info = await resolveRoleAndNursery(session.user.id)
+            }
+
+            const currentTenantId = tenantRef.current?.id
+            if (currentTenantId && info.nurseryId && info.nurseryId !== currentTenantId) {
+              setTenantMismatch(true)
+              await supabase.auth.signOut()
+              setUser(null)
+              setRole(null)
+              setNurseryId(null)
+              clearCache()
+              return
+            }
+
+            setTenantMismatch(false)
+            setRole(info.role)
+            setNurseryId(info.nurseryId)
+            writeCache(info)
           } else {
             setUser(null)
             setRole(null)
-            localStorage.removeItem('userRole')
+            setNurseryId(null)
+            clearCache()
           }
         } finally {
           if (mounted) setLoading(false)
@@ -57,7 +88,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, role, loading }}>
+    <AuthContext.Provider value={{ user, role, nurseryId, loading, tenantMismatch }}>
       {children}
     </AuthContext.Provider>
   )
