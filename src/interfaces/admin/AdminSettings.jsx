@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase, supabaseAdmin } from '../../supabaseClient'
+import { supabase } from '../../supabaseClient'
 
 function Modal({ title, onClose, children }) {
   return (
@@ -48,7 +48,7 @@ export default function AdminSettings() {
     setSavingName(true)
     setError(null)
 
-    const { error: err } = await supabaseAdmin
+    const { error: err } = await supabase
       .from('settings')
       .upsert({ id: 1, branch_name: branchNameInput.trim() })
 

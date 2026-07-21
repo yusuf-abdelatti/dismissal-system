@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
-import { supabaseAdmin } from '../../supabaseClient'
+import { listUsers, createUser, deleteUser } from '../../adminUsers'
 
 function Modal({ title, onClose, children }) {
   return (
@@ -51,15 +51,14 @@ export default function AdminParents() {
   const load = async (showLoading = true) => {
     if (showLoading) setLoading(true)
 
-    const [adminResult, { data: staffData }, { data: childData }] =
+    const [allUsers, { data: staffData }, { data: childData }] =
       await Promise.all([
-        supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
+        listUsers().catch((err) => { console.error('listUsers error:', err); return [] }),
         supabase.from('staff_profiles').select('id'),
         supabase.from('children').select('id, full_name, parent_user_id').eq('is_active', true),
       ])
 
     const staffIds = new Set((staffData || []).map((s) => s.id))
-    const allUsers = adminResult.data?.users || []
     const childMap = Object.fromEntries(
       (childData || [])
         .filter((c) => c.parent_user_id)
@@ -92,14 +91,10 @@ export default function AdminParents() {
     setError(null)
 
     // Create user via admin API (bypasses email confirmation)
-    const { data: newUserData, error: createError } =
-      await supabaseAdmin.auth.admin.createUser({
-        email: form.email.trim(),
-        password: form.password,
-        email_confirm: true,
-      })
-
-    if (createError) {
+    let newUser
+    try {
+      newUser = await createUser(form.email.trim(), form.password)
+    } catch (createError) {
       console.error('Create user error:', createError)
       setError(`Failed to create account: ${createError.message}`)
       setSaving(false)
@@ -110,7 +105,7 @@ export default function AdminParents() {
     if (form.child_id) {
       await supabase
         .from('children')
-        .update({ parent_user_id: newUserData.user.id })
+        .update({ parent_user_id: newUser.id })
         .eq('id', form.child_id)
     }
 
@@ -131,7 +126,7 @@ export default function AdminParents() {
 
   const deleteParent = async (parentId) => {
     setDeleteTarget(null)
-    await supabaseAdmin.auth.admin.deleteUser(parentId)
+    await deleteUser(parentId)
     load()
   }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
-import { supabaseAdmin } from '../../supabaseClient'
+import { listUsers } from '../../adminUsers'
 
 function Modal({ title, onClose, children }) {
   return (
@@ -53,14 +53,14 @@ export default function AdminChildren() {
   const load = async (showLoading = true) => {
     if (showLoading) setLoading(true)
 
-    const [{ data: childData }, { data: classData }, adminResult] =
+    const [{ data: childData }, { data: classData }, allUsers] =
       await Promise.all([
         supabase
           .from('children')
           .select('*, classes(name, color)')
           .order('full_name'),
         supabase.from('classes').select('id, name').order('name'),
-        supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
+        listUsers().catch((err) => { console.error('listUsers error:', err); return [] }),
       ])
 
     // Fetch staff IDs to identify which users are parents (not staff)
@@ -69,7 +69,6 @@ export default function AdminChildren() {
       .select('id')
 
     const staffIds = new Set((staffData || []).map((s) => s.id))
-    const allUsers = adminResult.data?.users || []
     const parentUsers = allUsers
       .filter((u) => !staffIds.has(u.id))
       .map((u) => ({ id: u.id, email: u.email }))
@@ -140,7 +139,7 @@ export default function AdminChildren() {
 
   const deleteChild = async (childId) => {
     setDeleteTarget(null)
-    await supabaseAdmin.from('children').delete().eq('id', childId)
+    await supabase.from('children').delete().eq('id', childId)
     load()
   }
 

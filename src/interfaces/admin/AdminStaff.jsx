@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
-import { supabaseAdmin } from '../../supabaseClient'
+import { listUsers, createUser, deleteUser } from '../../adminUsers'
 
 function Modal({ title, onClose, children }) {
   return (
@@ -56,15 +56,14 @@ export default function AdminStaff() {
   const load = async (showLoading = true) => {
     if (showLoading) setLoading(true)
 
-    const [{ data: profiles }, adminResult, { data: classData }] = await Promise.all([
+    const [{ data: profiles }, users, { data: classData }] = await Promise.all([
       supabase.from('staff_profiles').select('id, display_name, role, class_id').order('display_name'),
-      supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
+      listUsers().catch((err) => { console.error('listUsers error:', err); return [] }),
       supabase.from('classes').select('id, name').order('name'),
     ])
 
-    if (adminResult.error) console.error('listUsers error:', adminResult.error)
     const userEmailMap = Object.fromEntries(
-      (adminResult.data?.users || []).map((u) => [u.id, u.email])
+      users.map((u) => [u.id, u.email])
     )
 
     const combined = (profiles || []).map((p) => ({
@@ -90,24 +89,20 @@ export default function AdminStaff() {
     setSaving(true)
     setError(null)
 
-    const { data: newUserData, error: createError } =
-      await supabaseAdmin.auth.admin.createUser({
-        email: form.email.trim(),
-        password: form.password,
-        email_confirm: true,
-      })
-
-    if (createError) {
+    let newUser
+    try {
+      newUser = await createUser(form.email.trim(), form.password)
+    } catch (createError) {
       console.error('Create user error:', createError)
       setError(`Failed to create account: ${createError.message}`)
       setSaving(false)
       return
     }
 
-    const { error: profileError } = await supabaseAdmin
+    const { error: profileError } = await supabase
       .from('staff_profiles')
       .insert({
-        id: newUserData.user.id,
+        id: newUser.id,
         display_name: form.display_name.trim(),
         role: form.role,
         class_id: form.class_id || null,
@@ -152,7 +147,7 @@ export default function AdminStaff() {
 
   const deleteStaff = async (memberId) => {
     setDeleteTarget(null)
-    await supabaseAdmin.auth.admin.deleteUser(memberId)
+    await deleteUser(memberId)
     load()
   }
 
