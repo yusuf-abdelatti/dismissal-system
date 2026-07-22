@@ -80,6 +80,18 @@ Deno.serve(async (req) => {
       const { email, password } = params
       if (!email || !password) return json({ error: 'email and password are required' }, 400)
 
+      if (!isSuperAdmin && callerNurseryId) {
+        const { data: nursery } = await adminClient
+          .from('nurseries')
+          .select('email_domain')
+          .eq('id', callerNurseryId)
+          .maybeSingle()
+
+        if (nursery?.email_domain && !email.toLowerCase().endsWith(`@${nursery.email_domain.toLowerCase()}`)) {
+          return json({ error: `Email must end with @${nursery.email_domain}` }, 400)
+        }
+      }
+
       const { data, error } = await adminClient.auth.admin.createUser({
         email,
         password,

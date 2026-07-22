@@ -30,7 +30,7 @@ function CountdownBadge({ requestedAt, status, durationSeconds }) {
       )
     }
     return (
-      <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 font-bold text-sm px-3 py-1 rounded-full">
+      <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 font-bold text-sm px-3 py-1 rounded-full whitespace-nowrap">
         ⚡ ARRIVED{text ? ` · ${text}` : ''}
       </span>
     )

@@ -29,6 +29,7 @@ export default function AdminStaff() {
   const { nurseryId } = useAuth()
   const [staffList, setStaffList] = useState([])
   const [classes, setClasses] = useState([])
+  const [emailDomain, setEmailDomain] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
@@ -39,6 +40,16 @@ export default function AdminStaff() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [successMsg, setSuccessMsg] = useState(null)
+
+  useEffect(() => {
+    if (!nurseryId) return
+    supabase
+      .from('nurseries')
+      .select('email_domain')
+      .eq('id', nurseryId)
+      .maybeSingle()
+      .then(({ data }) => setEmailDomain(data?.email_domain || null))
+  }, [nurseryId])
 
   useEffect(() => {
     load()
@@ -91,9 +102,11 @@ export default function AdminStaff() {
     setSaving(true)
     setError(null)
 
+    const email = emailDomain ? `${form.email.trim().toLowerCase()}@${emailDomain}` : form.email.trim()
+
     let newUser
     try {
-      newUser = await createUser(form.email.trim(), form.password)
+      newUser = await createUser(email, form.password)
     } catch (createError) {
       console.error('Create user error:', createError)
       setError(`Failed to create account: ${createError.message}`)
@@ -273,12 +286,25 @@ export default function AdminStaff() {
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            />
+            {emailDomain ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={form.email}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="name"
+                />
+                <span className="text-gray-500 text-sm whitespace-nowrap">@{emailDomain}</span>
+              </div>
+            ) : (
+              <input
+                type="email"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              />
+            )}
           </div>
 
           <div className="mb-4">

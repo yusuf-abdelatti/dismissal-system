@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
+import { useAuth } from '../../hooks/useAuth'
 import { listUsers, createUser, deleteUser } from '../../adminUsers'
 
 function Modal({ title, onClose, children }) {
@@ -22,8 +23,10 @@ function Modal({ title, onClose, children }) {
 }
 
 export default function AdminParents() {
+  const { nurseryId } = useAuth()
   const [parents, setParents] = useState([]) // {id, email, childName}
   const [children, setChildren] = useState([])
+  const [emailDomain, setEmailDomain] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({ email: '', password: '', child_id: '' })
@@ -32,6 +35,16 @@ export default function AdminParents() {
   const [successMsg, setSuccessMsg] = useState(null)
   const [resetTarget, setResetTarget] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+
+  useEffect(() => {
+    if (!nurseryId) return
+    supabase
+      .from('nurseries')
+      .select('email_domain')
+      .eq('id', nurseryId)
+      .maybeSingle()
+      .then(({ data }) => setEmailDomain(data?.email_domain || null))
+  }, [nurseryId])
 
   useEffect(() => {
     load()
@@ -90,10 +103,12 @@ export default function AdminParents() {
     setSaving(true)
     setError(null)
 
+    const email = emailDomain ? `${form.email.trim().toLowerCase()}@${emailDomain}` : form.email.trim()
+
     // Create user via admin API (bypasses email confirmation)
     let newUser
     try {
-      newUser = await createUser(form.email.trim(), form.password)
+      newUser = await createUser(email, form.password)
     } catch (createError) {
       console.error('Create user error:', createError)
       setError(`Failed to create account: ${createError.message}`)
@@ -206,12 +221,25 @@ export default function AdminParents() {
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            />
+            {emailDomain ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={form.email}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="name"
+                />
+                <span className="text-gray-500 text-sm whitespace-nowrap">@{emailDomain}</span>
+              </div>
+            ) : (
+              <input
+                type="email"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              />
+            )}
           </div>
 
           <div className="mb-4">

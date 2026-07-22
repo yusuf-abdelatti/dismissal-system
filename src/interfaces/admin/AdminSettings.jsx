@@ -25,9 +25,6 @@ function toForm(nursery) {
   return {
     name: nursery.name,
     logo_url: nursery.logo_url || '',
-    primary_color: nursery.primary_color,
-    secondary_color: nursery.secondary_color,
-    background_color: nursery.background_color,
     pickup_countdown_minutes: Math.round(nursery.pickup_countdown_seconds / 60),
     daily_reset_hour: nursery.daily_reset_hour,
     timezone: nursery.timezone,
@@ -98,9 +95,6 @@ export default function AdminSettings() {
       .update({
         name: form.name.trim(),
         logo_url: form.logo_url || null,
-        primary_color: form.primary_color,
-        secondary_color: form.secondary_color,
-        background_color: form.background_color,
         pickup_countdown_seconds: Math.max(1, Number(form.pickup_countdown_minutes) || 10) * 60,
         daily_reset_hour: Number(form.daily_reset_hour),
         timezone: form.timezone.trim() || 'UTC',
@@ -159,7 +153,8 @@ export default function AdminSettings() {
       <div className="bg-white rounded-xl shadow-sm p-6 mb-4">
         <h2 className="font-semibold text-gray-900 mb-1">Branding</h2>
         <p className="text-gray-500 text-sm mb-4">
-          Your name, logo and colors — shown across the display board, staff app, parent app and login page.
+          Your name and logo — shown across the display board, staff app, parent app and login page.
+          Colors are set by Technothera when your nursery is set up — contact support below to change them.
         </p>
 
         <div className="mb-4">
@@ -192,36 +187,6 @@ export default function AdminSettings() {
           </div>
           {uploadingLogo && <p className="text-xs text-gray-400 mt-1">Uploading…</p>}
           <p className="text-xs text-gray-400 mt-1">Square image, at least 512×512px, works best.</p>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Primary</label>
-            <input
-              type="color"
-              className="w-full h-10 rounded cursor-pointer border border-gray-300"
-              value={form.primary_color}
-              onChange={(e) => setForm((f) => ({ ...f, primary_color: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Secondary</label>
-            <input
-              type="color"
-              className="w-full h-10 rounded cursor-pointer border border-gray-300"
-              value={form.secondary_color}
-              onChange={(e) => setForm((f) => ({ ...f, secondary_color: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Background</label>
-            <input
-              type="color"
-              className="w-full h-10 rounded cursor-pointer border border-gray-300"
-              value={form.background_color}
-              onChange={(e) => setForm((f) => ({ ...f, background_color: e.target.value }))}
-            />
-          </div>
         </div>
       </div>
 
@@ -302,6 +267,17 @@ export default function AdminSettings() {
         >
           Reset Today's Requests
         </button>
+      </div>
+
+      {/* Support */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mt-4">
+        <h2 className="font-semibold text-gray-900 mb-1">Support</h2>
+        <p className="text-gray-500 text-sm">
+          Need a color change, a new class limit, or help with anything else? Contact{' '}
+          <a href="mailto:info@technothera.com" className="text-blue-600 hover:underline">
+            info@technothera.com
+          </a>
+        </p>
       </div>
 
       {/* Reset confirmation modal */}

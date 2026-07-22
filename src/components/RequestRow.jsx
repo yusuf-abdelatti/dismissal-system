@@ -53,13 +53,20 @@ export default function RequestRow({ request, tick }) {
       </div>
 
       {/* Status / countdown */}
-      <div className="w-56 text-right shrink-0 font-mono">
+      <div className="w-60 text-right shrink-0 font-mono whitespace-nowrap overflow-hidden">
         {isArrived ? (
-          <span
-            className={`font-black text-2xl tracking-wide ${isEscalated ? 'text-red-400' : 'text-white'}`}
-          >
-            ⚡ ARRIVED{isEscalated ? ' — WAITING' : countdownText ? ` · ${countdownText}` : ''}
-          </span>
+          isEscalated ? (
+            <span className="font-black text-xl tracking-wide text-red-400">
+              ⚡ ARRIVED — WAITING
+            </span>
+          ) : (
+            <span className="font-black text-xl tracking-wide text-white">
+              ⚡ ARRIVED
+              {countdownText && (
+                <span className="ml-2 text-base font-bold text-gray-300 tabular-nums">{countdownText}</span>
+              )}
+            </span>
+          )
         ) : isReady ? (
           <span className="text-green-400 font-black text-2xl">Ready</span>
         ) : countdownText ? (

@@ -32,6 +32,7 @@ const EMPTY_FORM = {
   daily_reset_hour: 19,
   timezone: 'UTC',
   child_limit: '',
+  email_domain: '',
 }
 
 function toForm(nursery) {
@@ -46,6 +47,7 @@ function toForm(nursery) {
     daily_reset_hour: nursery.daily_reset_hour,
     timezone: nursery.timezone,
     child_limit: nursery.child_limit ?? '',
+    email_domain: nursery.email_domain || '',
   }
 }
 
@@ -61,6 +63,7 @@ function toPayload(form) {
     daily_reset_hour: Number(form.daily_reset_hour),
     timezone: form.timezone.trim() || 'UTC',
     child_limit: form.child_limit === '' ? null : Number(form.child_limit),
+    email_domain: form.email_domain.trim().toLowerCase().replace(/^@/, '') || null,
   }
 }
 
@@ -425,6 +428,25 @@ export default function SuperAdminNurseries() {
                 onChange={(e) => setForm((f) => ({ ...f, child_limit: e.target.value }))}
               />
             </div>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Staff/Parent Email Domain <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <div className="flex items-center gap-1">
+              <span className="text-gray-400 text-sm">@</span>
+              <input
+                type="text"
+                placeholder="finnly.com"
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={form.email_domain}
+                onChange={(e) => setForm((f) => ({ ...f, email_domain: e.target.value }))}
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              When set, this nursery's admin can only create staff/parent accounts ending in this domain.
+            </p>
           </div>
 
           <div className="flex gap-3 justify-end">
