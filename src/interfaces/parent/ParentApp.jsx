@@ -3,6 +3,56 @@ import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../hooks/useAuth'
 import { useTenant } from '../../hooks/useTenant'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
+import { getCountdownSeconds, formatCountdown, isOverdue } from '../../utils/countdown'
+
+function Countdown({ requestedAt, durationSeconds, className }) {
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+  void tick
+
+  const text = formatCountdown(getCountdownSeconds(requestedAt, durationSeconds))
+  if (!text) return null
+
+  return <p className={className}>{text} remaining</p>
+}
+
+function ArrivedStatus({ requestedAt, durationSeconds }) {
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+  void tick
+
+  if (isOverdue(requestedAt, durationSeconds)) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-3 text-amber-700 text-sm font-medium">
+        Any moment now — thank you for your patience
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-3 text-green-700 text-sm font-medium">
+      Arrival confirmed — please wait
+    </div>
+  )
+}
+
+function deliveryMessageFor(request, durationSeconds) {
+  if (!request?.delivered_at || !request?.requested_at) return null
+
+  const deadline = new Date(request.requested_at).getTime() + durationSeconds * 1000
+  const deliveredAt = new Date(request.delivered_at).getTime()
+  const minutesEarly = Math.round((deadline - deliveredAt) / 60000)
+
+  if (minutesEarly >= 1) return `Delivered ${minutesEarly} minute${minutesEarly === 1 ? '' : 's'} early.`
+  if (minutesEarly === 0) return 'Delivered right on time.'
+  return null // late — no message, per product decision
+}
 
 export default function ParentApp() {
   const { user } = useAuth()
@@ -13,6 +63,7 @@ export default function ParentApp() {
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showGoodbye, setShowGoodbye] = useState(false)
+  const [goodbyeMessage, setGoodbyeMessage] = useState(null)
   const channelRef = useRef(null)
   const { status, errorMsg, isSupported, subscribe } = usePushNotifications(user?.id)
 
@@ -80,9 +131,13 @@ export default function ParentApp() {
           if (!updated) return
 
           if (updated.status === 'delivered' || updated.status === 'cleared') {
+            setGoodbyeMessage(
+              updated.status === 'delivered' ? deliveryMessageFor(updated, tenant.pickupCountdownSeconds) : null
+            )
             setShowGoodbye(true)
             setTimeout(() => {
               setShowGoodbye(false)
+              setGoodbyeMessage(null)
               setRequest(null)
             }, 3000)
           } else {
@@ -168,7 +223,7 @@ export default function ParentApp() {
         <div className="text-center">
           <div className="text-5xl mb-4">👋</div>
           <h2 className="text-2xl font-bold text-gray-800">Goodbye!</h2>
-          <p className="text-gray-500 mt-2">See you tomorrow</p>
+          <p className="text-gray-500 mt-2">{goodbyeMessage || 'See you tomorrow'}</p>
         </div>
       </div>
     )
@@ -248,6 +303,11 @@ export default function ParentApp() {
               <p className="text-gray-500 text-sm mt-1">
                 Staff have been notified
               </p>
+              <Countdown
+                requestedAt={request.requested_at}
+                durationSeconds={tenant.pickupCountdownSeconds}
+                className="text-blue-600 text-sm font-mono tabular-nums mt-3"
+              />
             </div>
             <p className="text-gray-500 mb-4 text-sm">
               Press the button below when you arrive at the nursery
@@ -274,6 +334,11 @@ export default function ParentApp() {
               <p className="text-amber-700 text-sm">
                 Come on over — we'll have them at the door with a smile 💛
               </p>
+              <Countdown
+                requestedAt={request.requested_at}
+                durationSeconds={tenant.pickupCountdownSeconds}
+                className="text-amber-700 text-sm font-mono tabular-nums mt-3"
+              />
             </div>
             <p className="text-gray-500 mb-4 text-sm">
               Press the button below when you arrive
@@ -310,9 +375,7 @@ export default function ParentApp() {
               </p>
             </div>
 
-            <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-3 text-green-700 text-sm font-medium">
-              Arrival confirmed — please wait
-            </div>
+            <ArrivedStatus requestedAt={request.requested_at} durationSeconds={tenant.pickupCountdownSeconds} />
           </div>
         )}
       </div>

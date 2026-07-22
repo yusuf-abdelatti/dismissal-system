@@ -1,19 +1,25 @@
-import { getCountdownSeconds, formatCountdown } from '../utils/countdown'
+import { getCountdownSeconds, formatCountdown, isOverdue } from '../utils/countdown'
+import { useTenant } from '../hooks/useTenant'
 
 export default function RequestRow({ request, tick }) {
   // tick prop triggers re-render every second so countdown stays live
   void tick
+
+  const { tenant } = useTenant()
+  const duration = tenant.pickupCountdownSeconds
 
   const child = request.children
   const classColor = child?.classes?.color || '#6B7280'
   const className = child?.classes?.name || '—'
   const childName = child?.full_name || '—'
 
-  const remaining = getCountdownSeconds(request.requested_at)
+  const remaining = getCountdownSeconds(request.requested_at, duration)
   const countdownText = formatCountdown(remaining)
+  const overdue = isOverdue(request.requested_at, duration)
 
   const isArrived = request.status === 'arrived'
   const isReady = request.status === 'ready'
+  const isEscalated = isArrived && overdue
 
   return (
     <div
@@ -22,9 +28,9 @@ export default function RequestRow({ request, tick }) {
       }`}
       style={{
         height: '60px',
-        backgroundColor: `${classColor}12`,
-        borderLeft: `5px solid ${classColor}`,
-        boxShadow: isArrived ? `0 0 18px ${classColor}66` : 'none',
+        backgroundColor: isEscalated ? 'rgba(220,38,38,0.15)' : `${classColor}12`,
+        borderLeft: `5px solid ${isEscalated ? '#DC2626' : classColor}`,
+        boxShadow: isArrived ? `0 0 18px ${isEscalated ? '#DC262699' : `${classColor}66`}` : 'none',
       }}
     >
       {/* Class color dot */}
@@ -47,10 +53,12 @@ export default function RequestRow({ request, tick }) {
       </div>
 
       {/* Status / countdown */}
-      <div className="w-44 text-right shrink-0 font-mono">
+      <div className="w-56 text-right shrink-0 font-mono">
         {isArrived ? (
-          <span className="text-white font-black text-2xl tracking-wide">
-            ⚡ ARRIVED
+          <span
+            className={`font-black text-2xl tracking-wide ${isEscalated ? 'text-red-400' : 'text-white'}`}
+          >
+            ⚡ ARRIVED{isEscalated ? ' — WAITING' : countdownText ? ` · ${countdownText}` : ''}
           </span>
         ) : isReady ? (
           <span className="text-green-400 font-black text-2xl">Ready</span>

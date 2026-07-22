@@ -24,13 +24,14 @@ Deno.serve(async (req) => {
 
     const { data: child } = await supabase
       .from('children')
-      .select('full_name, parent_user_id')
+      .select('full_name, parent_user_id, nurseries(logo_url)')
       .eq('id', record.child_id)
       .single()
 
     if (!child?.parent_user_id) return new Response('ok')
 
     const firstName = child.full_name.split(' ')[0]
+    const icon = (child as any).nurseries?.logo_url || undefined
 
     const { data: subs } = await supabase
       .from('push_subscriptions')
@@ -45,6 +46,7 @@ Deno.serve(async (req) => {
         await webPush.sendNotification(parsed, JSON.stringify({
           title: '🌟 Your child is ready!',
           body: `${firstName} is ready and waiting — come on over 💛`,
+          icon,
         }))
         console.log('Parent notified')
       } catch (e: any) {

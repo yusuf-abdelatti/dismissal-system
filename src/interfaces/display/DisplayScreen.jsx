@@ -69,7 +69,7 @@ function LiveBoard({ audioCtx, tenant }) {
     })
   }, [requests, audioCtx])
 
-  const sorted = sortRequests(requests)
+  const sorted = sortRequests(requests, tenant.pickupCountdownSeconds)
 
   return (
     <div className="min-h-screen bg-[#0F1117] flex flex-col font-mono">

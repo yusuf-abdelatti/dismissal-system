@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
+import { useAuth } from '../../hooks/useAuth'
 
 function Modal({ title, onClose, children }) {
   return (
@@ -20,48 +21,101 @@ function Modal({ title, onClose, children }) {
   )
 }
 
+function toForm(nursery) {
+  return {
+    name: nursery.name,
+    logo_url: nursery.logo_url || '',
+    primary_color: nursery.primary_color,
+    secondary_color: nursery.secondary_color,
+    background_color: nursery.background_color,
+    pickup_countdown_minutes: Math.round(nursery.pickup_countdown_seconds / 60),
+    daily_reset_hour: nursery.daily_reset_hour,
+    timezone: nursery.timezone,
+  }
+}
+
 export default function AdminSettings() {
-  const [branchName, setBranchName] = useState('')
-  const [branchNameInput, setBranchNameInput] = useState('')
-  const [savingName, setSavingName] = useState(false)
-  const [nameSuccess, setNameSuccess] = useState(false)
+  const { nurseryId } = useAuth()
+  const [nursery, setNursery] = useState(null)
+  const [form, setForm] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [resetSuccess, setResetSuccess] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    if (!nurseryId) return
     supabase
-      .from('settings')
-      .select('branch_name')
-      .eq('id', 1)
+      .from('nurseries')
+      .select('*')
+      .eq('id', nurseryId)
       .maybeSingle()
       .then(({ data }) => {
-        const name = data?.branch_name || ''
-        setBranchName(name)
-        setBranchNameInput(name)
+        if (data) {
+          setNursery(data)
+          setForm(toForm(data))
+        }
       })
-  }, [])
+  }, [nurseryId])
 
-  const saveBranchName = async () => {
-    if (!branchNameInput.trim()) return
-    setSavingName(true)
+  const uploadLogo = async (file) => {
+    if (!file || !nursery) return
+    setUploadingLogo(true)
     setError(null)
 
-    const { error: err } = await supabase
-      .from('settings')
-      .upsert({ id: 1, branch_name: branchNameInput.trim() })
+    const ext = file.name.split('.').pop()
+    const path = `${nursery.slug}-${Date.now()}.${ext}`
 
-    if (err) {
-      setError('Something went wrong. Please try again.')
-      setSavingName(false)
+    const { error: uploadErr } = await supabase.storage.from('nursery-logos').upload(path, file, {
+      cacheControl: '31536000',
+      upsert: true,
+    })
+
+    if (uploadErr) {
+      setError('Logo upload failed. Please try again.')
+      setUploadingLogo(false)
       return
     }
 
-    setBranchName(branchNameInput.trim())
-    setNameSuccess(true)
-    setSavingName(false)
-    setTimeout(() => setNameSuccess(false), 3000)
+    const { data } = supabase.storage.from('nursery-logos').getPublicUrl(path)
+    setForm((f) => ({ ...f, logo_url: data.publicUrl }))
+    setUploadingLogo(false)
+  }
+
+  const save = async () => {
+    if (!form.name.trim()) {
+      setError('Name is required.')
+      return
+    }
+    setSaving(true)
+    setError(null)
+
+    const { error: err } = await supabase
+      .from('nurseries')
+      .update({
+        name: form.name.trim(),
+        logo_url: form.logo_url || null,
+        primary_color: form.primary_color,
+        secondary_color: form.secondary_color,
+        background_color: form.background_color,
+        pickup_countdown_seconds: Math.max(1, Number(form.pickup_countdown_minutes) || 10) * 60,
+        daily_reset_hour: Number(form.daily_reset_hour),
+        timezone: form.timezone.trim() || 'UTC',
+      })
+      .eq('id', nurseryId)
+
+    setSaving(false)
+
+    if (err) {
+      setError('Something went wrong. Please try again.')
+      return
+    }
+
+    setSuccess(true)
+    setTimeout(() => setSuccess(false), 3000)
   }
 
   const endOfDayReset = async () => {
@@ -87,6 +141,10 @@ export default function AdminSettings() {
     setTimeout(() => setResetSuccess(false), 5000)
   }
 
+  if (!form) {
+    return <div className="text-gray-400 py-12 text-center">Loading…</div>
+  }
+
   return (
     <div className="max-w-xl">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
@@ -97,38 +155,139 @@ export default function AdminSettings() {
         </div>
       )}
 
-      {/* Branch name */}
+      {/* Branding */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-4">
-        <h2 className="font-semibold text-gray-900 mb-1">Branch Name</h2>
+        <h2 className="font-semibold text-gray-900 mb-1">Branding</h2>
         <p className="text-gray-500 text-sm mb-4">
-          Displayed in the header of the live dismissal board.
+          Your name, logo and colors — shown across the display board, staff app, parent app and login page.
         </p>
-        <div className="flex gap-3">
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Nursery Name</label>
           <input
             type="text"
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={branchNameInput}
-            onChange={(e) => setBranchNameInput(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           />
-          <button
-            onClick={saveBranchName}
-            disabled={savingName || branchNameInput.trim() === branchName}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
-          >
-            {savingName ? 'Saving…' : 'Save'}
-          </button>
         </div>
-        {nameSuccess && (
-          <p className="text-green-600 text-xs mt-2">Branch name updated.</p>
-        )}
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Logo</label>
+          <div className="flex items-center gap-3">
+            {form.logo_url && (
+              <img
+                src={form.logo_url}
+                alt="Logo preview"
+                className="w-12 h-12 rounded-lg object-contain border border-gray-200 bg-gray-50"
+              />
+            )}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml"
+              className="flex-1 text-sm text-gray-600"
+              onChange={(e) => uploadLogo(e.target.files?.[0])}
+              disabled={uploadingLogo}
+            />
+          </div>
+          {uploadingLogo && <p className="text-xs text-gray-400 mt-1">Uploading…</p>}
+          <p className="text-xs text-gray-400 mt-1">Square image, at least 512×512px, works best.</p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Primary</label>
+            <input
+              type="color"
+              className="w-full h-10 rounded cursor-pointer border border-gray-300"
+              value={form.primary_color}
+              onChange={(e) => setForm((f) => ({ ...f, primary_color: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Secondary</label>
+            <input
+              type="color"
+              className="w-full h-10 rounded cursor-pointer border border-gray-300"
+              value={form.secondary_color}
+              onChange={(e) => setForm((f) => ({ ...f, secondary_color: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Background</label>
+            <input
+              type="color"
+              className="w-full h-10 rounded cursor-pointer border border-gray-300"
+              value={form.background_color}
+              onChange={(e) => setForm((f) => ({ ...f, background_color: e.target.value }))}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* End-of-day reset */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="font-semibold text-gray-900 mb-1">End-of-Day Reset</h2>
+      {/* Pickup timer + daily reset */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-4">
+        <h2 className="font-semibold text-gray-900 mb-1">Pickup Timer & Daily Reset</h2>
         <p className="text-gray-500 text-sm mb-4">
-          Clears all active pickup requests for today. Use this at the end of
-          each school day after all children have been collected.
+          How long the countdown runs after a pickup request, and when today's board automatically clears.
+        </p>
+
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Countdown (minutes)</label>
+            <input
+              type="number"
+              min="1"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={form.pickup_countdown_minutes}
+              onChange={(e) => setForm((f) => ({ ...f, pickup_countdown_minutes: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Daily reset hour (0–23)</label>
+            <input
+              type="number"
+              min="0"
+              max="23"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={form.daily_reset_hour}
+              onChange={(e) => setForm((f) => ({ ...f, daily_reset_hour: e.target.value }))}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Timezone <span className="text-gray-400 font-normal">(IANA, e.g. Africa/Cairo)</span>
+          </label>
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={form.timezone}
+            onChange={(e) => setForm((f) => ({ ...f, timezone: e.target.value }))}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={save}
+          disabled={saving}
+          className="px-5 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        >
+          {saving ? 'Saving…' : 'Save Settings'}
+        </button>
+      </div>
+      {success && (
+        <p className="text-green-600 text-xs text-right -mt-3 mb-4">Settings updated.</p>
+      )}
+
+      {/* Manual end-of-day reset */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <h2 className="font-semibold text-gray-900 mb-1">Reset Today's Requests Now</h2>
+        <p className="text-gray-500 text-sm mb-4">
+          Clears all active pickup requests immediately, ahead of the automatic daily reset time above.
+          Delivered records are kept in History.
         </p>
 
         {resetSuccess && (
@@ -148,7 +307,7 @@ export default function AdminSettings() {
       {/* Reset confirmation modal */}
       {showResetConfirm && (
         <Modal
-          title="Confirm End-of-Day Reset"
+          title="Confirm Reset"
           onClose={() => setShowResetConfirm(false)}
         >
           <p className="text-sm text-gray-700 mb-5">

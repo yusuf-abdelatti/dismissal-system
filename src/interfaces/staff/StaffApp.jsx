@@ -5,9 +5,9 @@ import { useTenant } from '../../hooks/useTenant'
 import { usePickupRequests } from '../../hooks/usePickupRequests'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
 import { sortRequests } from '../../utils/sorting'
-import { getCountdownSeconds, formatCountdown } from '../../utils/countdown'
+import { getCountdownSeconds, formatCountdown, isOverdue } from '../../utils/countdown'
 
-function CountdownBadge({ requestedAt, status }) {
+function CountdownBadge({ requestedAt, status, durationSeconds }) {
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -17,10 +17,21 @@ function CountdownBadge({ requestedAt, status }) {
 
   void tick
 
+  const remaining = getCountdownSeconds(requestedAt, durationSeconds)
+  const text = formatCountdown(remaining)
+  const overdue = isOverdue(requestedAt, durationSeconds)
+
   if (status === 'arrived') {
+    if (overdue) {
+      return (
+        <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 font-bold text-sm px-3 py-1 rounded-full animate-pulse">
+          ⚡ ARRIVED — WAITING
+        </span>
+      )
+    }
     return (
       <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 font-bold text-sm px-3 py-1 rounded-full">
-        ⚡ ARRIVED
+        ⚡ ARRIVED{text ? ` · ${text}` : ''}
       </span>
     )
   }
@@ -32,9 +43,6 @@ function CountdownBadge({ requestedAt, status }) {
       </span>
     )
   }
-
-  const remaining = getCountdownSeconds(requestedAt)
-  const text = formatCountdown(remaining)
 
   if (!text) {
     return <span className="text-amber-600 text-sm font-medium">Arriving Soon</span>
@@ -75,7 +83,7 @@ function RequestCard({ request, onMarkReady, onMarkDelivered }) {
         >
           {child?.classes?.name || '—'}
         </span>
-        <CountdownBadge requestedAt={request.requested_at} status={request.status} />
+        <CountdownBadge requestedAt={request.requested_at} status={request.status} durationSeconds={tenant.pickupCountdownSeconds} />
       </div>
 
       <div className="flex gap-2">
@@ -170,7 +178,7 @@ export default function StaffApp() {
     await supabase.auth.signOut()
   }
 
-  const sorted = sortRequests(filtered)
+  const sorted = sortRequests(filtered, tenant.pickupCountdownSeconds)
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: tenant.backgroundColor }}>

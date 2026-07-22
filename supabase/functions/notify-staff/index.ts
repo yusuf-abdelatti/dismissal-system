@@ -54,17 +54,18 @@ Deno.serve(async (req) => {
 
     const { data: child } = await supabase
       .from('children')
-      .select('class_id, full_name')
+      .select('class_id, full_name, nurseries(logo_url)')
       .eq('id', record.child_id)
       .single()
 
     if (!child?.class_id) return new Response('ok')
 
     const firstName = child.full_name.split(' ')[0]
+    const icon = (child as any).nurseries?.logo_url || undefined
 
     const payload = isArrived
-      ? { title: '⚡ Parent Has Arrived!', body: `${firstName}'s parent is at the door` }
-      : { title: '🔔 New Pickup Request', body: `${firstName} needs to be picked up` }
+      ? { title: '⚡ Parent Has Arrived!', body: `${firstName}'s parent is at the door`, icon }
+      : { title: '🔔 New Pickup Request', body: `${firstName} needs to be picked up`, icon }
 
     const { data: staffRows } = await supabase
       .from('staff_profiles')
