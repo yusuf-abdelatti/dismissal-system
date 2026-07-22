@@ -130,6 +130,32 @@ Deno.serve(async (req) => {
       return json({ ok: true })
     }
 
+    if (action === 'deleteNursery') {
+      const { nurseryId } = params
+      if (!nurseryId) return json({ error: 'nurseryId is required' }, 400)
+      if (!isSuperAdmin) return json({ error: 'Forbidden' }, 403)
+
+      const [{ data: staffRows }, { data: childRows }] = await Promise.all([
+        adminClient.from('staff_profiles').select('id').eq('nursery_id', nurseryId),
+        adminClient.from('children').select('parent_user_id').eq('nursery_id', nurseryId),
+      ])
+
+      const userIds = new Set([
+        ...(staffRows || []).map((s: any) => s.id),
+        ...(childRows || []).map((c: any) => c.parent_user_id).filter(Boolean),
+      ])
+
+      // Deleting each auth user cascades away their staff_profiles/children row.
+      for (const id of userIds) {
+        await adminClient.auth.admin.deleteUser(id)
+      }
+
+      // Cascades any remaining classes/children/pickup_requests for this nursery.
+      const { error } = await adminClient.from('nurseries').delete().eq('id', nurseryId)
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
     return json({ error: 'Unknown action' }, 400)
   } catch (err) {
     return json({ error: String(err) }, 500)

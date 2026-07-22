@@ -86,6 +86,13 @@ export default function AdminChildren() {
 
   const parentEmailMap = Object.fromEntries(parents.map((p) => [p.id, p.email]))
 
+  // Only offer parents not already linked to a child, except the one already
+  // linked to whichever child is currently being edited (so it stays selected).
+  const linkedParentIds = new Set(children.map((c) => c.parent_user_id).filter(Boolean))
+  const availableParents = parents.filter(
+    (p) => !linkedParentIds.has(p.id) || p.id === editing?.parent_user_id
+  )
+
   const grouped = useMemo(() => {
     const q = search.trim().toLowerCase()
     const filtered = q ? children.filter((c) => c.full_name.toLowerCase().includes(q)) : children
@@ -344,7 +351,7 @@ export default function AdminChildren() {
               }
             >
               <option value="">No parent linked</option>
-              {parents.map((p) => (
+              {availableParents.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.email}
                 </option>

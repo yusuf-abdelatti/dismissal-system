@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
-import { createUser } from '../../adminUsers'
+import { createUser, deleteNursery } from '../../adminUsers'
 
 function Modal({ title, onClose, children }) {
   return (
@@ -82,6 +82,11 @@ export default function SuperAdminNurseries() {
   const [adminError, setAdminError] = useState(null)
   const [adminSaving, setAdminSaving] = useState(false)
   const [adminSuccess, setAdminSuccess] = useState(null)
+
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleteError, setDeleteError] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     load()
@@ -172,6 +177,24 @@ export default function SuperAdminNurseries() {
   const toggleActive = async (nursery) => {
     await supabase.from('nurseries').update({ is_active: !nursery.is_active }).eq('id', nursery.id)
     load()
+  }
+
+  const confirmDeleteNursery = async () => {
+    if (deleteConfirmText.trim().toLowerCase() !== deleteTarget.slug.toLowerCase()) {
+      setDeleteError('Type the slug exactly to confirm.')
+      return
+    }
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await deleteNursery(deleteTarget.id)
+      setDeleteTarget(null)
+      setDeleteConfirmText('')
+      load()
+    } catch (err) {
+      setDeleteError(err.message)
+    }
+    setDeleting(false)
   }
 
   const openAddAdmin = (nursery) => {
@@ -281,8 +304,14 @@ export default function SuperAdminNurseries() {
                   <button onClick={() => openEdit(n)} className="text-blue-600 hover:underline text-xs mr-3">
                     Edit
                   </button>
-                  <button onClick={() => toggleActive(n)} className="text-gray-500 hover:underline text-xs">
+                  <button onClick={() => toggleActive(n)} className="text-gray-500 hover:underline text-xs mr-3">
                     {n.is_active ? 'Suspend' : 'Reactivate'}
+                  </button>
+                  <button
+                    onClick={() => { setDeleteTarget(n); setDeleteConfirmText(''); setDeleteError(null) }}
+                    className="text-red-500 hover:underline text-xs"
+                  >
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -510,6 +539,48 @@ export default function SuperAdminNurseries() {
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
               {adminSaving ? 'Creating…' : 'Create Account'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete nursery confirmation */}
+      {deleteTarget && (
+        <Modal
+          title={`Delete ${deleteTarget.name}`}
+          onClose={() => { setDeleteTarget(null); setDeleteConfirmText(''); setDeleteError(null) }}
+        >
+          {deleteError && (
+            <div className="bg-red-50 text-red-700 text-sm px-3 py-2 rounded-lg mb-4">{deleteError}</div>
+          )}
+          <p className="text-sm text-gray-700 mb-4">
+            This permanently deletes <strong>{deleteTarget.name}</strong> and everything in it — every class,
+            child, pickup request, and every staff/parent login. This cannot be undone.
+          </p>
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Type <span className="font-mono">{deleteTarget.slug}</span> to confirm
+            </label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-500"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => { setDeleteTarget(null); setDeleteConfirmText(''); setDeleteError(null) }}
+              className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDeleteNursery}
+              disabled={deleting}
+              className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+            >
+              {deleting ? 'Deleting…' : 'Permanently Delete'}
             </button>
           </div>
         </Modal>
