@@ -19,7 +19,7 @@ function Countdown({ requestedAt, durationSeconds, className }) {
   return <p className={className}>{text} remaining</p>
 }
 
-function ArrivedStatus({ requestedAt, durationSeconds }) {
+function ArrivedStatus({ requestedAt, durationSeconds, firstName }) {
   const [tick, setTick] = useState(0)
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 1000)
@@ -35,9 +35,12 @@ function ArrivedStatus({ requestedAt, durationSeconds }) {
     )
   }
 
+  const text = formatCountdown(getCountdownSeconds(requestedAt, durationSeconds))
+
   return (
-    <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-3 text-green-700 text-sm font-medium">
-      Arrival confirmed — please wait
+    <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-4 text-green-700 text-sm font-medium">
+      <p>You arrived a little early — we'll bring {firstName || 'your child'} out as soon as we can 💛</p>
+      {text && <p className="mt-2 font-mono text-lg tabular-nums text-green-800">{text} remaining</p>}
     </div>
   )
 }
@@ -375,7 +378,7 @@ export default function ParentApp() {
               </p>
             </div>
 
-            <ArrivedStatus requestedAt={request.requested_at} durationSeconds={tenant.pickupCountdownSeconds} />
+            <ArrivedStatus requestedAt={request.requested_at} durationSeconds={tenant.pickupCountdownSeconds} firstName={firstName} />
           </div>
         )}
       </div>
