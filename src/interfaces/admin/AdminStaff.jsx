@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../hooks/useAuth'
-import { listUsers, createUser, deleteUser } from '../../adminUsers'
+import { listUsers, createUser, deleteUser, setPassword } from '../../adminUsers'
 
 function Modal({ title, onClose, children }) {
   return (
@@ -34,6 +34,9 @@ export default function AdminStaff() {
   const [showAdd, setShowAdd] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
   const [resetTarget, setResetTarget] = useState(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [resetError, setResetError] = useState(null)
+  const [resetSaving, setResetSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState({ email: '', password: '', display_name: '', role: 'staff', class_id: '' })
   const [editForm, setEditForm] = useState({ role: 'staff', class_id: '' })
@@ -152,13 +155,23 @@ export default function AdminStaff() {
     load()
   }
 
-  const sendPasswordReset = async (email) => {
-    setResetTarget(null)
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email)
-    if (!err) {
-      setSuccessMsg(`Password reset email sent to ${email}.`)
-      setTimeout(() => setSuccessMsg(null), 5000)
+  const applyPasswordReset = async () => {
+    if (newPassword.length < 6) {
+      setResetError('Password must be at least 6 characters.')
+      return
     }
+    setResetSaving(true)
+    setResetError(null)
+    try {
+      await setPassword(resetTarget.id, newPassword)
+      setSuccessMsg(`Password updated for ${resetTarget.email}.`)
+      setTimeout(() => setSuccessMsg(null), 5000)
+      setResetTarget(null)
+      setNewPassword('')
+    } catch (err) {
+      setResetError(err.message)
+    }
+    setResetSaving(false)
   }
 
   const deleteStaff = async (memberId) => {
@@ -421,25 +434,41 @@ export default function AdminStaff() {
         </Modal>
       )}
 
-      {/* Reset password confirmation */}
+      {/* Set new password */}
       {resetTarget && (
-        <Modal title="Reset Password" onClose={() => setResetTarget(null)}>
-          <p className="text-sm text-gray-700 mb-5">
-            Send a password reset email to{' '}
-            <strong>{resetTarget.email}</strong>?
+        <Modal
+          title="Set New Password"
+          onClose={() => { setResetTarget(null); setNewPassword(''); setResetError(null) }}
+        >
+          {resetError && (
+            <div className="bg-red-50 text-red-700 text-sm px-3 py-2 rounded-lg mb-4">{resetError}</div>
+          )}
+          <p className="text-sm text-gray-600 mb-4">
+            Set a new password for <strong>{resetTarget.email}</strong>. They can sign in with it immediately.
           </p>
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="min. 6 characters"
+            />
+          </div>
           <div className="flex gap-3 justify-end">
             <button
-              onClick={() => setResetTarget(null)}
+              onClick={() => { setResetTarget(null); setNewPassword(''); setResetError(null) }}
               className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
             >
               Cancel
             </button>
             <button
-              onClick={() => sendPasswordReset(resetTarget.email)}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              onClick={applyPasswordReset}
+              disabled={resetSaving}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
-              Send Reset Email
+              {resetSaving ? 'Saving…' : 'Set Password'}
             </button>
           </div>
         </Modal>

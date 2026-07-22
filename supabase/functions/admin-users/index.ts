@@ -101,6 +101,21 @@ Deno.serve(async (req) => {
       return json({ user: { id: data.user.id, email: data.user.email } })
     }
 
+    if (action === 'setPassword') {
+      const { userId, password } = params
+      if (!userId || !password) return json({ error: 'userId and password are required' }, 400)
+      if (password.length < 6) return json({ error: 'Password must be at least 6 characters' }, 400)
+
+      if (!isSuperAdmin) {
+        const allowed = await nurseryUserIds(callerNurseryId!)
+        if (!allowed.has(userId)) return json({ error: 'Forbidden' }, 403)
+      }
+
+      const { error } = await adminClient.auth.admin.updateUserById(userId, { password })
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
     if (action === 'delete') {
       const { userId } = params
       if (!userId) return json({ error: 'userId is required' }, 400)

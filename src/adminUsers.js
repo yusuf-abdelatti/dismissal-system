@@ -21,3 +21,7 @@ export function createUser(email, password) {
 export function deleteUser(userId) {
   return callAdminUsers({ action: 'delete', userId })
 }
+
+export function setPassword(userId, password) {
+  return callAdminUsers({ action: 'setPassword', userId, password })
+}

@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../hooks/useAuth'
 import { listUsers } from '../../adminUsers'
+
+const NO_CLASS = 'No Class'
 
 function Modal({ title, onClose, children }) {
   return (
@@ -36,6 +38,7 @@ export default function AdminChildren() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     load()
@@ -82,6 +85,25 @@ export default function AdminChildren() {
   }
 
   const parentEmailMap = Object.fromEntries(parents.map((p) => [p.id, p.email]))
+
+  const grouped = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const filtered = q ? children.filter((c) => c.full_name.toLowerCase().includes(q)) : children
+
+    const byClass = {}
+    for (const c of filtered) {
+      const key = c.classes?.name || NO_CLASS
+      if (!byClass[key]) byClass[key] = []
+      byClass[key].push(c)
+    }
+    for (const key of Object.keys(byClass)) {
+      byClass[key].sort((a, b) => a.full_name.localeCompare(b.full_name))
+    }
+
+    const classNames = Object.keys(byClass).filter((k) => k !== NO_CLASS).sort()
+    if (byClass[NO_CLASS]) classNames.push(NO_CLASS)
+    return classNames.map((name) => ({ name, rows: byClass[name] }))
+  }, [children, search])
 
   const openAdd = () => {
     setEditing(null)
@@ -151,105 +173,100 @@ export default function AdminChildren() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Children</h1>
-        <button
-          onClick={openAdd}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-        >
-          Add Child
-        </button>
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            placeholder="Search by name…"
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button
+            onClick={openAdd}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors whitespace-nowrap"
+          >
+            Add Child
+          </button>
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
-        <table className="w-full text-sm min-w-[600px]">
-          <thead>
-            <tr className="border-b bg-gray-50">
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Name</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Class</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Parent Email</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Active</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {children.map((child) => (
-              <tr
-                key={child.id}
-                className={`border-b last:border-0 hover:bg-gray-50 ${
-                  !child.is_active ? 'opacity-50' : ''
-                }`}
-              >
-                <td className="px-4 py-3 font-medium text-gray-900">
-                  {child.full_name}
-                </td>
-                <td className="px-4 py-3">
-                  {child.classes ? (
-                    <span
-                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
-                      style={{
-                        backgroundColor: `${child.classes.color}20`,
-                        color: child.classes.color,
-                      }}
-                    >
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: child.classes.color }}
-                      />
-                      {child.classes.name}
-                    </span>
-                  ) : (
-                    <span className="text-gray-400 text-xs">No class</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-gray-500 text-xs">
-                  {child.parent_user_id
-                    ? parentEmailMap[child.parent_user_id] || '—'
-                    : '—'}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      child.is_active
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-500'
+      {grouped.length === 0 && (
+        <div className="bg-white rounded-xl shadow-sm px-4 py-8 text-center text-gray-400">
+          {search ? 'No matches' : 'No children yet'}
+        </div>
+      )}
+
+      {grouped.map((group) => (
+        <div key={group.name} className="mb-6">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            {group.name} <span className="text-gray-400 font-normal normal-case">({group.rows.length})</span>
+          </h2>
+          <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
+            <table className="w-full text-sm min-w-[600px]">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Name</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Parent Email</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Active</th>
+                  <th className="px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody>
+                {group.rows.map((child) => (
+                  <tr
+                    key={child.id}
+                    className={`border-b last:border-0 hover:bg-gray-50 ${
+                      !child.is_active ? 'opacity-50' : ''
                     }`}
                   >
-                    {child.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right whitespace-nowrap">
-                  <button
-                    onClick={() => openEdit(child)}
-                    className="text-blue-600 hover:underline text-xs mr-3"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => toggleActive(child)}
-                    className="text-gray-500 hover:underline text-xs mr-3"
-                  >
-                    {child.is_active ? 'Deactivate' : 'Activate'}
-                  </button>
-                  <button
-                    onClick={() => setDeleteTarget(child)}
-                    className="text-red-500 hover:underline text-xs"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {children.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                  No children yet
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {child.full_name}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">
+                      {child.parent_user_id
+                        ? parentEmailMap[child.parent_user_id] || '—'
+                        : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          child.is_active
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {child.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <button
+                        onClick={() => openEdit(child)}
+                        className="text-blue-600 hover:underline text-xs mr-3"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => toggleActive(child)}
+                        className="text-gray-500 hover:underline text-xs mr-3"
+                      >
+                        {child.is_active ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(child)}
+                        className="text-red-500 hover:underline text-xs"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
 
       {deleteTarget && (
         <Modal title="Delete Child" onClose={() => setDeleteTarget(null)}>

@@ -1,3 +1,7 @@
-node_modules 
-dist 
-.env.local 
+node_modules
+dist
+.env.local
+
+# Contains real children's names/birthdates — never commit
+Children List.xlsx
+excel_dump.txt
