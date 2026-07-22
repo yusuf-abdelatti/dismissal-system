@@ -24,6 +24,7 @@ function Modal({ title, onClose, children }) {
 const EMPTY_FORM = {
   slug: '',
   name: '',
+  logo_url: '',
   primary_color: '#6B9BAF',
   secondary_color: '#C49A45',
   background_color: '#EAE5DF',
@@ -37,6 +38,7 @@ function toForm(nursery) {
   return {
     slug: nursery.slug,
     name: nursery.name,
+    logo_url: nursery.logo_url || '',
     primary_color: nursery.primary_color,
     secondary_color: nursery.secondary_color,
     background_color: nursery.background_color,
@@ -51,6 +53,7 @@ function toPayload(form) {
   return {
     slug: form.slug.trim().toLowerCase(),
     name: form.name.trim(),
+    logo_url: form.logo_url || null,
     primary_color: form.primary_color,
     secondary_color: form.secondary_color,
     background_color: form.background_color,
@@ -69,6 +72,7 @@ export default function SuperAdminNurseries() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
 
   const [adminTarget, setAdminTarget] = useState(null)
   const [adminForm, setAdminForm] = useState({ display_name: '', email: '', password: '' })
@@ -106,6 +110,35 @@ export default function SuperAdminNurseries() {
     setForm(toForm(nursery))
     setError(null)
     setShowModal(true)
+  }
+
+  const uploadLogo = async (file) => {
+    if (!file) return
+    if (!form.slug.trim()) {
+      setError('Enter a slug before uploading a logo.')
+      return
+    }
+
+    setUploadingLogo(true)
+    setError(null)
+
+    const ext = file.name.split('.').pop()
+    const path = `${form.slug.trim().toLowerCase()}-${Date.now()}.${ext}`
+
+    const { error: uploadErr } = await supabase.storage.from('nursery-logos').upload(path, file, {
+      cacheControl: '31536000',
+      upsert: true,
+    })
+
+    if (uploadErr) {
+      setError('Logo upload failed. Please try again.')
+      setUploadingLogo(false)
+      return
+    }
+
+    const { data } = supabase.storage.from('nursery-logos').getPublicUrl(path)
+    setForm((f) => ({ ...f, logo_url: data.publicUrl }))
+    setUploadingLogo(false)
   }
 
   const save = async () => {
@@ -288,6 +321,28 @@ export default function SuperAdminNurseries() {
               onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
               disabled={!!editing}
             />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Logo</label>
+            <div className="flex items-center gap-3">
+              {form.logo_url && (
+                <img
+                  src={form.logo_url}
+                  alt="Logo preview"
+                  className="w-12 h-12 rounded-lg object-contain border border-gray-200 bg-gray-50"
+                />
+              )}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml"
+                className="flex-1 text-sm text-gray-600"
+                onChange={(e) => uploadLogo(e.target.files?.[0])}
+                disabled={uploadingLogo}
+              />
+            </div>
+            {uploadingLogo && <p className="text-xs text-gray-400 mt-1">Uploading…</p>}
+            <p className="text-xs text-gray-400 mt-1">Square image, at least 512×512px, works best.</p>
           </div>
 
           <div className="grid grid-cols-3 gap-3 mb-4">
