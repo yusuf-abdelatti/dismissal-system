@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
-import { TenantProvider } from './hooks/useTenant'
+import { TenantProvider, useTenant } from './hooks/useTenant'
 import LoginPage from './components/LoginPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import ParentApp from './interfaces/parent/ParentApp'
@@ -16,6 +16,18 @@ const ROLE_REDIRECTS = {
   display: '/display',
   parent: '/parent',
   super_admin: '/super-admin',
+}
+
+// Blocks rendering until the tenant is resolved from the subdomain, so no
+// page ever flashes another nursery's (or the default) branding first.
+function TenantGate({ children }) {
+  const { loading } = useTenant()
+
+  if (loading) {
+    return <div className="min-h-screen bg-gray-900" />
+  }
+
+  return children
 }
 
 function RootRedirect() {
@@ -93,10 +105,12 @@ export default function App() {
   return (
     <BrowserRouter>
       <TenantProvider>
-        <AuthProvider>
-          <AppRoutes />
-          <PWAInstallBanner />
-        </AuthProvider>
+        <TenantGate>
+          <AuthProvider>
+            <AppRoutes />
+            <PWAInstallBanner />
+          </AuthProvider>
+        </TenantGate>
       </TenantProvider>
     </BrowserRouter>
   )
