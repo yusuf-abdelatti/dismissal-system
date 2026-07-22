@@ -25,6 +25,7 @@ const EMPTY_FORM = {
   slug: '',
   name: '',
   logo_url: '',
+  icon_url: '',
   primary_color: '#6B9BAF',
   secondary_color: '#C49A45',
   background_color: '#EAE5DF',
@@ -40,6 +41,7 @@ function toForm(nursery) {
     slug: nursery.slug,
     name: nursery.name,
     logo_url: nursery.logo_url || '',
+    icon_url: nursery.icon_url || '',
     primary_color: nursery.primary_color,
     secondary_color: nursery.secondary_color,
     background_color: nursery.background_color,
@@ -56,6 +58,7 @@ function toPayload(form) {
     slug: form.slug.trim().toLowerCase(),
     name: form.name.trim(),
     logo_url: form.logo_url || null,
+    icon_url: form.icon_url || null,
     primary_color: form.primary_color,
     secondary_color: form.secondary_color,
     background_color: form.background_color,
@@ -76,6 +79,7 @@ export default function SuperAdminNurseries() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingIcon, setUploadingIcon] = useState(false)
 
   const [adminTarget, setAdminTarget] = useState(null)
   const [adminForm, setAdminForm] = useState({ display_name: '', email: '', password: '' })
@@ -120,18 +124,18 @@ export default function SuperAdminNurseries() {
     setShowModal(true)
   }
 
-  const uploadLogo = async (file) => {
+  const uploadImage = async (file, field, setUploading) => {
     if (!file) return
     if (!form.slug.trim()) {
-      setError('Enter a slug before uploading a logo.')
+      setError('Enter a slug before uploading an image.')
       return
     }
 
-    setUploadingLogo(true)
+    setUploading(true)
     setError(null)
 
     const ext = file.name.split('.').pop()
-    const path = `${form.slug.trim().toLowerCase()}-${Date.now()}.${ext}`
+    const path = `${form.slug.trim().toLowerCase()}-${field}-${Date.now()}.${ext}`
 
     const { error: uploadErr } = await supabase.storage.from('nursery-logos').upload(path, file, {
       cacheControl: '31536000',
@@ -139,14 +143,14 @@ export default function SuperAdminNurseries() {
     })
 
     if (uploadErr) {
-      setError('Logo upload failed. Please try again.')
-      setUploadingLogo(false)
+      setError('Image upload failed. Please try again.')
+      setUploading(false)
       return
     }
 
     const { data } = supabase.storage.from('nursery-logos').getPublicUrl(path)
-    setForm((f) => ({ ...f, logo_url: data.publicUrl }))
-    setUploadingLogo(false)
+    setForm((f) => ({ ...f, [field]: data.publicUrl }))
+    setUploading(false)
   }
 
   const save = async () => {
@@ -369,12 +373,39 @@ export default function SuperAdminNurseries() {
                 type="file"
                 accept="image/png,image/jpeg,image/svg+xml"
                 className="flex-1 text-sm text-gray-600"
-                onChange={(e) => uploadLogo(e.target.files?.[0])}
+                onChange={(e) => uploadImage(e.target.files?.[0], 'logo_url', setUploadingLogo)}
                 disabled={uploadingLogo}
               />
             </div>
             {uploadingLogo && <p className="text-xs text-gray-400 mt-1">Uploading…</p>}
-            <p className="text-xs text-gray-400 mt-1">Square image, at least 512×512px, works best.</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Used on the login page, admin sidebar and display board — a wider logo works fine here.
+            </p>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">App Icon (PWA)</label>
+            <div className="flex items-center gap-3">
+              {form.icon_url && (
+                <img
+                  src={form.icon_url}
+                  alt="Icon preview"
+                  className="w-12 h-12 rounded-lg object-contain border border-gray-200 bg-gray-50"
+                />
+              )}
+              <input
+                type="file"
+                accept="image/png,image/jpeg"
+                className="flex-1 text-sm text-gray-600"
+                onChange={(e) => uploadImage(e.target.files?.[0], 'icon_url', setUploadingIcon)}
+                disabled={uploadingIcon}
+              />
+            </div>
+            {uploadingIcon && <p className="text-xs text-gray-400 mt-1">Uploading…</p>}
+            <p className="text-xs text-gray-400 mt-1">
+              Square, exactly 512×512px — used only for the home-screen icon when parents/staff install the app.
+              Falls back to the logo above if not set.
+            </p>
           </div>
 
           <div className="grid grid-cols-3 gap-3 mb-4">

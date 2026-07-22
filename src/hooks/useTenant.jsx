@@ -8,6 +8,7 @@ const DEFAULT_TENANT = {
   slug: null,
   name: 'Finnly',
   logoUrl: '/finnly-logo.png',
+  iconUrl: '/icon.png',
   primaryColor: '#6B9BAF',
   secondaryColor: '#C49A45',
   backgroundColor: '#EAE5DF',
@@ -44,7 +45,7 @@ function applyBranding(tenant) {
   document.title = tenant.name
   setMeta('theme-color', tenant.primaryColor)
   setMeta('apple-mobile-web-app-title', tenant.name)
-  if (tenant.logoUrl) setLink('apple-touch-icon', tenant.logoUrl)
+  if (tenant.iconUrl || tenant.logoUrl) setLink('apple-touch-icon', tenant.iconUrl || tenant.logoUrl)
 }
 
 export function TenantProvider({ children }) {

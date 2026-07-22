@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const nursery = await getNurseryForRequest(req)
 
   const name = nursery?.name || 'Dismissal System'
-  const icon = nursery?.logo_url || '/icon.png'
+  const icon = nursery?.icon_url || nursery?.logo_url || '/icon.png'
   const iconType = guessMimeType(icon)
 
   res.status(200).send(

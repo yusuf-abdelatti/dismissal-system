@@ -25,6 +25,7 @@ function toForm(nursery) {
   return {
     name: nursery.name,
     logo_url: nursery.logo_url || '',
+    icon_url: nursery.icon_url || '',
     pickup_countdown_minutes: Math.round(nursery.pickup_countdown_seconds / 60),
     daily_reset_hour: nursery.daily_reset_hour,
     timezone: nursery.timezone,
@@ -38,6 +39,7 @@ export default function AdminSettings() {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingIcon, setUploadingIcon] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [resetSuccess, setResetSuccess] = useState(false)
@@ -58,13 +60,13 @@ export default function AdminSettings() {
       })
   }, [nurseryId])
 
-  const uploadLogo = async (file) => {
+  const uploadImage = async (file, field, setUploading) => {
     if (!file || !nursery) return
-    setUploadingLogo(true)
+    setUploading(true)
     setError(null)
 
     const ext = file.name.split('.').pop()
-    const path = `${nursery.slug}-${Date.now()}.${ext}`
+    const path = `${nursery.slug}-${field}-${Date.now()}.${ext}`
 
     const { error: uploadErr } = await supabase.storage.from('nursery-logos').upload(path, file, {
       cacheControl: '31536000',
@@ -72,14 +74,14 @@ export default function AdminSettings() {
     })
 
     if (uploadErr) {
-      setError('Logo upload failed. Please try again.')
-      setUploadingLogo(false)
+      setError('Image upload failed. Please try again.')
+      setUploading(false)
       return
     }
 
     const { data } = supabase.storage.from('nursery-logos').getPublicUrl(path)
-    setForm((f) => ({ ...f, logo_url: data.publicUrl }))
-    setUploadingLogo(false)
+    setForm((f) => ({ ...f, [field]: data.publicUrl }))
+    setUploading(false)
   }
 
   const save = async () => {
@@ -95,6 +97,7 @@ export default function AdminSettings() {
       .update({
         name: form.name.trim(),
         logo_url: form.logo_url || null,
+        icon_url: form.icon_url || null,
         pickup_countdown_seconds: Math.max(1, Number(form.pickup_countdown_minutes) || 10) * 60,
         daily_reset_hour: Number(form.daily_reset_hour),
         timezone: form.timezone.trim() || 'UTC',
@@ -181,12 +184,39 @@ export default function AdminSettings() {
               type="file"
               accept="image/png,image/jpeg,image/svg+xml"
               className="flex-1 text-sm text-gray-600"
-              onChange={(e) => uploadLogo(e.target.files?.[0])}
+              onChange={(e) => uploadImage(e.target.files?.[0], 'logo_url', setUploadingLogo)}
               disabled={uploadingLogo}
             />
           </div>
           {uploadingLogo && <p className="text-xs text-gray-400 mt-1">Uploading…</p>}
-          <p className="text-xs text-gray-400 mt-1">Square image, at least 512×512px, works best.</p>
+          <p className="text-xs text-gray-400 mt-1">
+            Used on the login page, sidebar and display board — a wider logo works fine here.
+          </p>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">App Icon (PWA)</label>
+          <div className="flex items-center gap-3">
+            {form.icon_url && (
+              <img
+                src={form.icon_url}
+                alt="Icon preview"
+                className="w-12 h-12 rounded-lg object-contain border border-gray-200 bg-gray-50"
+              />
+            )}
+            <input
+              type="file"
+              accept="image/png,image/jpeg"
+              className="flex-1 text-sm text-gray-600"
+              onChange={(e) => uploadImage(e.target.files?.[0], 'icon_url', setUploadingIcon)}
+              disabled={uploadingIcon}
+            />
+          </div>
+          {uploadingIcon && <p className="text-xs text-gray-400 mt-1">Uploading…</p>}
+          <p className="text-xs text-gray-400 mt-1">
+            Square, exactly 512×512px — used only for the home-screen icon when parents/staff install the app.
+            Falls back to the logo above if not set.
+          </p>
         </div>
       </div>
 
