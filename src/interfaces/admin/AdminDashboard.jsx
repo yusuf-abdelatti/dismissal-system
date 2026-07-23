@@ -59,7 +59,7 @@ export default function AdminDashboard() {
         }`}
         style={{ backgroundColor: tenant.primaryColor }}
       >
-        <div className="p-6 border-b border-white/20">
+        <div className="p-6 border-b border-white/20" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}>
           <img
             src={tenant.logoUrl}
             alt={tenant.name}
@@ -105,7 +105,14 @@ export default function AdminDashboard() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-auto">
         {/* Mobile top bar */}
-        <header className="lg:hidden border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10" style={{ backgroundColor: tenant.backgroundColor, borderColor: '#d4cfc8' }}>
+        <header
+          className="lg:hidden border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10"
+          style={{
+            backgroundColor: tenant.backgroundColor,
+            borderColor: '#d4cfc8',
+            paddingTop: 'max(0.75rem, env(safe-area-inset-top))',
+          }}
+        >
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 rounded-lg hover:bg-black/5"

@@ -67,6 +67,7 @@ export default function ParentApp() {
   const [error, setError] = useState(null)
   const [showGoodbye, setShowGoodbye] = useState(false)
   const [goodbyeMessage, setGoodbyeMessage] = useState(null)
+  const [confirmingCancel, setConfirmingCancel] = useState(false)
   const channelRef = useRef(null)
   const { status, errorMsg, isSupported, subscribe } = usePushNotifications(user?.id)
 
@@ -133,16 +134,18 @@ export default function ParentApp() {
           const updated = payload.new
           if (!updated) return
 
-          if (updated.status === 'delivered' || updated.status === 'cleared') {
-            setGoodbyeMessage(
-              updated.status === 'delivered' ? deliveryMessageFor(updated, tenant.pickupCountdownSeconds) : null
-            )
+          if (updated.status === 'delivered') {
+            setGoodbyeMessage(deliveryMessageFor(updated, tenant.pickupCountdownSeconds))
             setShowGoodbye(true)
             setTimeout(() => {
               setShowGoodbye(false)
               setGoodbyeMessage(null)
               setRequest(null)
             }, 3000)
+          } else if (updated.status === 'cleared') {
+            // Cancelled (by the parent) or cleared out (end-of-day reset) —
+            // neither is a "goodbye, see you tomorrow" moment, just reset quietly.
+            setRequest(null)
           } else {
             setRequest(updated)
           }
@@ -170,6 +173,24 @@ export default function ParentApp() {
     }
 
     setRequest(data)
+    setActionLoading(false)
+  }
+
+  const cancelRequest = async () => {
+    setActionLoading(true)
+    setError(null)
+
+    const { error: updateError } = await supabase
+      .from('pickup_requests')
+      .update({ status: 'cleared' })
+      .eq('id', request.id)
+
+    if (updateError) {
+      setError('Something went wrong. Please try again.')
+    } else {
+      setRequest(null)
+    }
+    setConfirmingCancel(false)
     setActionLoading(false)
   }
 
@@ -236,8 +257,8 @@ export default function ParentApp() {
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: tenant.backgroundColor }}>
       {/* Header */}
       <div
-        className="px-6 pt-12 pb-8 text-white"
-        style={{ backgroundColor: accentColor }}
+        className="px-6 pb-8 text-white"
+        style={{ backgroundColor: accentColor, paddingTop: 'max(3rem, calc(1.5rem + env(safe-area-inset-top)))' }}
       >
         <div className="flex justify-between items-start">
           <div>
@@ -323,6 +344,33 @@ export default function ParentApp() {
             >
               {actionLoading ? 'Updating…' : 'I Have Arrived'}
             </button>
+            {confirmingCancel ? (
+              <div className="w-full mt-4 bg-red-50 border border-red-200 rounded-xl p-4 text-left">
+                <p className="text-sm text-red-700 mb-3 text-center">Cancel this pickup request?</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConfirmingCancel(false)}
+                    className="flex-1 py-2.5 rounded-lg text-sm font-medium bg-white border border-gray-300 text-gray-700"
+                  >
+                    Keep it
+                  </button>
+                  <button
+                    onClick={cancelRequest}
+                    disabled={actionLoading}
+                    className="flex-1 py-2.5 rounded-lg text-sm font-medium bg-red-600 text-white disabled:opacity-50"
+                  >
+                    {actionLoading ? 'Cancelling…' : 'Yes, Cancel'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmingCancel(true)}
+                className="text-gray-400 text-sm underline mt-4"
+              >
+                Cancel request
+              </button>
+            )}
           </div>
         )}
 
@@ -354,6 +402,33 @@ export default function ParentApp() {
             >
               {actionLoading ? 'Updating…' : 'I Have Arrived'}
             </button>
+            {confirmingCancel ? (
+              <div className="w-full mt-4 bg-red-50 border border-red-200 rounded-xl p-4 text-left">
+                <p className="text-sm text-red-700 mb-3 text-center">Cancel this pickup request?</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConfirmingCancel(false)}
+                    className="flex-1 py-2.5 rounded-lg text-sm font-medium bg-white border border-gray-300 text-gray-700"
+                  >
+                    Keep it
+                  </button>
+                  <button
+                    onClick={cancelRequest}
+                    disabled={actionLoading}
+                    className="flex-1 py-2.5 rounded-lg text-sm font-medium bg-red-600 text-white disabled:opacity-50"
+                  >
+                    {actionLoading ? 'Cancelling…' : 'Yes, Cancel'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmingCancel(true)}
+                className="text-gray-400 text-sm underline mt-4"
+              >
+                Cancel request
+              </button>
+            )}
           </div>
         )}
 

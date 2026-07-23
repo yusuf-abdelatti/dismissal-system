@@ -74,7 +74,10 @@ function LiveBoard({ audioCtx, tenant }) {
   return (
     <div className="min-h-screen bg-[#0F1117] flex flex-col font-mono">
       {/* Header */}
-      <div className="flex justify-between items-center px-8 py-5 border-b border-gray-800">
+      <div
+        className="flex justify-between items-center px-8 py-5 border-b border-gray-800"
+        style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top))' }}
+      >
         <div>
           <div className="flex items-center gap-2 mb-0.5">
             <img src={tenant.logoUrl} alt={tenant.name} className="h-8 w-auto" />

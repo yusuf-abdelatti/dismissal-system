@@ -43,7 +43,7 @@ export default function SuperAdminDashboard() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="p-6 border-b border-white/10">
+        <div className="p-6 border-b border-white/10" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}>
           <h1 className="text-lg font-bold text-white">Platform Console</h1>
           <p className="text-xs mt-1 truncate text-gray-400">{user?.email}</p>
         </div>
@@ -76,7 +76,10 @@ export default function SuperAdminDashboard() {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-auto">
-        <header className="lg:hidden bg-white border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+        <header
+          className="lg:hidden bg-white border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10"
+          style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+        >
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 rounded-lg hover:bg-black/5"

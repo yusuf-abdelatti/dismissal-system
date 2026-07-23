@@ -182,7 +182,10 @@ export default function StaffApp() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: tenant.backgroundColor }}>
-      <div className="px-4 py-3 flex items-center gap-3" style={{ backgroundColor: tenant.primaryColor }}>
+      <div
+        className="px-4 py-3 flex items-center gap-3"
+        style={{ backgroundColor: tenant.primaryColor, paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+      >
         <div className="flex-1">
           <span className="font-semibold text-white">{staffName || 'Staff'}</span>
         </div>
