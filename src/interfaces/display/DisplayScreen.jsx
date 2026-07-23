@@ -192,6 +192,15 @@ export default function DisplayScreen() {
           <p className="text-gray-700 text-xs mt-6">
             Click anywhere or the button above to begin
           </p>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              supabase.auth.signOut()
+            }}
+            className="text-gray-700 text-xs underline mt-8 hover:text-gray-400"
+          >
+            Sign out
+          </button>
         </div>
       </div>
     )
