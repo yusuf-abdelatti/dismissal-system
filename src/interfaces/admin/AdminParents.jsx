@@ -35,6 +35,7 @@ export default function AdminParents() {
   const [form, setForm] = useState({ email: '', password: '', child_id: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [loadError, setLoadError] = useState(null)
   const [successMsg, setSuccessMsg] = useState(null)
   const [resetTarget, setResetTarget] = useState(null)
   const [newPassword, setNewPassword] = useState('')
@@ -69,10 +70,15 @@ export default function AdminParents() {
 
   const load = async (showLoading = true) => {
     if (showLoading) setLoading(true)
+    setLoadError(null)
 
     const [allUsers, { data: staffData }, { data: childData }] =
       await Promise.all([
-        listUsers().catch((err) => { console.error('listUsers error:', err); return [] }),
+        listUsers().catch((err) => {
+          console.error('listUsers error:', err)
+          setLoadError(`Couldn't load accounts: ${err.message}. Try refreshing.`)
+          return []
+        }),
         supabase.from('staff_profiles').select('id'),
         supabase.from('children').select('id, full_name, parent_user_id, classes(name)').eq('is_active', true),
       ])
@@ -215,6 +221,12 @@ export default function AdminParents() {
       {successMsg && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-4 text-sm">
           {successMsg}
+        </div>
+      )}
+
+      {loadError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm">
+          {loadError}
         </div>
       )}
 

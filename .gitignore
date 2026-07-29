@@ -5,3 +5,6 @@ dist
 # Contains real children's names/birthdates — never commit
 Children List.xlsx
 excel_dump.txt
+
+# Marketing/business files, not code
+*.pptx

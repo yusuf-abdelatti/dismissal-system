@@ -222,7 +222,7 @@ export default function SuperAdminNurseries() {
 
     let newUser
     try {
-      newUser = await createUser(adminForm.email.trim(), adminForm.password)
+      newUser = await createUser(adminForm.email.trim(), adminForm.password, adminTarget.id)
     } catch (err) {
       setAdminError(`Failed to create account: ${err.message}`)
       setAdminSaving(false)

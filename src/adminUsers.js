@@ -30,8 +30,11 @@ export function listUsers() {
   return callAdminUsers({ action: 'list' }).then((data) => data.users)
 }
 
-export function createUser(email, password) {
-  return callAdminUsers({ action: 'create', email, password }).then((data) => data.user)
+// nurseryId is only needed (and only honored) for super-admin-initiated
+// creation, e.g. provisioning a new nursery's first admin — a nursery's own
+// admin is always scoped server-side to their own nursery regardless.
+export function createUser(email, password, nurseryId) {
+  return callAdminUsers({ action: 'create', email, password, nurseryId }).then((data) => data.user)
 }
 
 export function deleteUser(userId) {

@@ -37,6 +37,7 @@ export default function AdminChildren() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [loadError, setLoadError] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [search, setSearch] = useState('')
 
@@ -57,6 +58,7 @@ export default function AdminChildren() {
 
   const load = async (showLoading = true) => {
     if (showLoading) setLoading(true)
+    setLoadError(null)
 
     const [{ data: childData }, { data: classData }, allUsers] =
       await Promise.all([
@@ -65,7 +67,11 @@ export default function AdminChildren() {
           .select('*, classes(name, color)')
           .order('full_name'),
         supabase.from('classes').select('id, name').order('name'),
-        listUsers().catch((err) => { console.error('listUsers error:', err); return [] }),
+        listUsers().catch((err) => {
+          console.error('listUsers error:', err)
+          setLoadError(`Couldn't load parent accounts: ${err.message}. Try refreshing.`)
+          return []
+        }),
       ])
 
     // Fetch staff IDs to identify which users are parents (not staff)
@@ -198,6 +204,12 @@ export default function AdminChildren() {
           </button>
         </div>
       </div>
+
+      {loadError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm">
+          {loadError}
+        </div>
+      )}
 
       {grouped.length === 0 && (
         <div className="bg-white rounded-xl shadow-sm px-4 py-8 text-center text-gray-400">

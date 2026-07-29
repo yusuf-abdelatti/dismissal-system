@@ -69,16 +69,27 @@ Deno.serve(async (req) => {
 
       let users = data.users
       if (!isSuperAdmin) {
-        const allowed = await nurseryUserIds(callerNurseryId!)
-        users = users.filter((u) => allowed.has(u.id))
+        // Two signals, OR'd together: app_metadata.nursery_id (set at creation
+        // time, works even before a parent is linked to a child) and the
+        // legacy staff_profiles/children join (covers older accounts created
+        // before app_metadata tagging existed).
+        const allowedViaLinks = await nurseryUserIds(callerNurseryId!)
+        users = users.filter(
+          (u) => u.app_metadata?.nursery_id === callerNurseryId || allowedViaLinks.has(u.id)
+        )
       }
 
       return json({ users: users.map((u) => ({ id: u.id, email: u.email })) })
     }
 
     if (action === 'create') {
-      const { email, password } = params
+      const { email, password, nurseryId: requestedNurseryId } = params
       if (!email || !password) return json({ error: 'email and password are required' }, 400)
+
+      // Non-super-admins can only ever create within their own nursery,
+      // regardless of what (if anything) they pass in.
+      const targetNurseryId = isSuperAdmin ? requestedNurseryId : callerNurseryId
+      if (isSuperAdmin && !targetNurseryId) return json({ error: 'nurseryId is required' }, 400)
 
       if (!isSuperAdmin && callerNurseryId) {
         const { data: nursery } = await adminClient
@@ -96,6 +107,7 @@ Deno.serve(async (req) => {
         email,
         password,
         email_confirm: true,
+        app_metadata: targetNurseryId ? { nursery_id: targetNurseryId } : undefined,
       })
       if (error) return json({ error: error.message }, 400)
       return json({ user: { id: data.user.id, email: data.user.email } })
@@ -107,8 +119,10 @@ Deno.serve(async (req) => {
       if (password.length < 6) return json({ error: 'Password must be at least 6 characters' }, 400)
 
       if (!isSuperAdmin) {
+        const { data: targetUser } = await adminClient.auth.admin.getUserById(userId)
         const allowed = await nurseryUserIds(callerNurseryId!)
-        if (!allowed.has(userId)) return json({ error: 'Forbidden' }, 403)
+        const ok = targetUser?.user?.app_metadata?.nursery_id === callerNurseryId || allowed.has(userId)
+        if (!ok) return json({ error: 'Forbidden' }, 403)
       }
 
       const { error } = await adminClient.auth.admin.updateUserById(userId, { password })
@@ -121,8 +135,10 @@ Deno.serve(async (req) => {
       if (!userId) return json({ error: 'userId is required' }, 400)
 
       if (!isSuperAdmin) {
+        const { data: targetUser } = await adminClient.auth.admin.getUserById(userId)
         const allowed = await nurseryUserIds(callerNurseryId!)
-        if (!allowed.has(userId)) return json({ error: 'Forbidden' }, 403)
+        const ok = targetUser?.user?.app_metadata?.nursery_id === callerNurseryId || allowed.has(userId)
+        if (!ok) return json({ error: 'Forbidden' }, 403)
       }
 
       const { error } = await adminClient.auth.admin.deleteUser(userId)

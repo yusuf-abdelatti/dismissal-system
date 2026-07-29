@@ -42,6 +42,7 @@ export default function AdminStaff() {
   const [editForm, setEditForm] = useState({ role: 'staff', class_id: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [loadError, setLoadError] = useState(null)
   const [successMsg, setSuccessMsg] = useState(null)
 
   useEffect(() => {
@@ -71,10 +72,15 @@ export default function AdminStaff() {
 
   const load = async (showLoading = true) => {
     if (showLoading) setLoading(true)
+    setLoadError(null)
 
     const [{ data: profiles }, users, { data: classData }] = await Promise.all([
       supabase.from('staff_profiles').select('id, display_name, role, class_id').order('display_name'),
-      listUsers().catch((err) => { console.error('listUsers error:', err); return [] }),
+      listUsers().catch((err) => {
+        console.error('listUsers error:', err)
+        setLoadError(`Couldn't load accounts: ${err.message}. Try refreshing.`)
+        return []
+      }),
       supabase.from('classes').select('id, name').order('name'),
     ])
 
@@ -205,6 +211,12 @@ export default function AdminStaff() {
       {successMsg && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-4 text-sm">
           {successMsg}
+        </div>
+      )}
+
+      {loadError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm">
+          {loadError}
         </div>
       )}
 
