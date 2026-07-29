@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
+import { supabase } from '../supabaseClient'
 
 // Falls back to today's Finnly look whenever /api/nursery can't resolve a
 // tenant (plain `vite dev` without the API layer, an apex/no-subdomain visit,
@@ -79,6 +80,42 @@ export function TenantProvider({ children }) {
       cancelled = true
     }
   }, [])
+
+  // Settings (countdown length, colors, logo, name) only apply to sessions
+  // that are still open once an admin changes them — without this, a staff
+  // member's already-open app keeps using whatever it fetched at page load,
+  // even after the setting changes underneath them.
+  useEffect(() => {
+    if (!tenant.id) return
+
+    const channel = supabase
+      .channel(`tenant_${tenant.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'nurseries', filter: `id=eq.${tenant.id}` },
+        (payload) => {
+          const row = payload.new
+          if (!row) return
+          setTenant((t) => {
+            const updated = {
+              ...t,
+              name: row.name ?? t.name,
+              logoUrl: row.logo_url ?? t.logoUrl,
+              iconUrl: row.icon_url || row.logo_url || t.iconUrl,
+              primaryColor: row.primary_color ?? t.primaryColor,
+              secondaryColor: row.secondary_color ?? t.secondaryColor,
+              backgroundColor: row.background_color ?? t.backgroundColor,
+              pickupCountdownSeconds: row.pickup_countdown_seconds ?? t.pickupCountdownSeconds,
+            }
+            applyBranding(updated)
+            return updated
+          })
+        }
+      )
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [tenant.id])
 
   return (
     <TenantContext.Provider value={{ tenant, loading }}>

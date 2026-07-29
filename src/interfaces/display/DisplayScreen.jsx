@@ -117,40 +117,11 @@ function LiveBoard({ audioCtx, tenant }) {
 }
 
 export default function DisplayScreen() {
-  const { tenant: baseTenant } = useTenant()
-  const [tenant, setTenant] = useState(baseTenant)
+  // useTenant() itself now live-syncs settings changes (name/colors/logo/
+  // countdown), so this component doesn't need its own copy/subscription.
+  const { tenant } = useTenant()
   const [activated, setActivated] = useState(false)
   const [audioCtx, setAudioCtx] = useState(null)
-
-  useEffect(() => {
-    setTenant(baseTenant)
-  }, [baseTenant])
-
-  // Live-sync branding if the nursery admin edits name/colors mid-day —
-  // same behavior the old settings-table subscription provided.
-  useEffect(() => {
-    if (!baseTenant?.id) return
-
-    const channel = supabase
-      .channel(`nursery_${baseTenant.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'nurseries', filter: `id=eq.${baseTenant.id}` },
-        (payload) => {
-          const row = payload.new
-          if (!row) return
-          setTenant((t) => ({
-            ...t,
-            name: row.name ?? t.name,
-            logoUrl: row.logo_url ?? t.logoUrl,
-            primaryColor: row.primary_color ?? t.primaryColor,
-          }))
-        }
-      )
-      .subscribe()
-
-    return () => supabase.removeChannel(channel)
-  }, [baseTenant?.id])
 
   const activate = async () => {
     const ctx = new AudioContext()
