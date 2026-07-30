@@ -113,6 +113,37 @@ Deno.serve(async (req) => {
       return json({ user: { id: data.user.id, email: data.user.email } })
     }
 
+    if (action === 'updateEmail') {
+      const { userId, email } = params
+      if (!userId || !email) return json({ error: 'userId and email are required' }, 400)
+
+      if (!isSuperAdmin) {
+        const { data: targetUser } = await adminClient.auth.admin.getUserById(userId)
+        const allowed = await nurseryUserIds(callerNurseryId!)
+        const ok = targetUser?.user?.app_metadata?.nursery_id === callerNurseryId || allowed.has(userId)
+        if (!ok) return json({ error: 'Forbidden' }, 403)
+
+        if (callerNurseryId) {
+          const { data: nursery } = await adminClient
+            .from('nurseries')
+            .select('email_domain')
+            .eq('id', callerNurseryId)
+            .maybeSingle()
+
+          if (nursery?.email_domain && !email.toLowerCase().endsWith(`@${nursery.email_domain.toLowerCase()}`)) {
+            return json({ error: `Email must end with @${nursery.email_domain}` }, 400)
+          }
+        }
+      }
+
+      const { data, error } = await adminClient.auth.admin.updateUserById(userId, {
+        email,
+        email_confirm: true,
+      })
+      if (error) return json({ error: error.message }, 400)
+      return json({ user: { id: data.user.id, email: data.user.email } })
+    }
+
     if (action === 'setPassword') {
       const { userId, password } = params
       if (!userId || !password) return json({ error: 'userId and password are required' }, 400)

@@ -17,6 +17,7 @@ self.addEventListener('push', (event) => {
       const data = JSON.parse(event.data.text())
       if (data.title) title = data.title
       if (data.body) body = data.body
+      if (data.icon) icon = data.icon
     }
   } catch (e) {}
 

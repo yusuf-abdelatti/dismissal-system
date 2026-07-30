@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../hooks/useAuth'
-import { listUsers, createUser, deleteUser, setPassword } from '../../adminUsers'
+import { listUsers, createUser, deleteUser, setPassword, updateEmail } from '../../adminUsers'
 
 function Modal({ title, onClose, children }) {
   return (
@@ -39,7 +39,8 @@ export default function AdminStaff() {
   const [resetSaving, setResetSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState({ email: '', password: '', display_name: '', role: 'staff', class_id: '' })
-  const [editForm, setEditForm] = useState({ role: 'staff', class_id: '' })
+  const [editForm, setEditForm] = useState({ display_name: '', email: '', role: 'staff', class_id: '' })
+  const [editError, setEditError] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [loadError, setLoadError] = useState(null)
@@ -146,17 +147,40 @@ export default function AdminStaff() {
   }
 
   const saveEdit = async () => {
-    setSaving(true)
-    const { error: err } = await supabase
-      .from('staff_profiles')
-      .update({ role: editForm.role, class_id: editForm.class_id || null })
-      .eq('id', editTarget.id)
-
-    if (err) {
-      setSaving(false)
+    if (!editForm.display_name.trim() || !editForm.email.trim()) {
+      setEditError('Name and email are required.')
       return
     }
+
+    setSaving(true)
+    setEditError(null)
+
+    const newEmail = emailDomain ? `${editForm.email.trim().toLowerCase()}@${emailDomain}` : editForm.email.trim()
+    if (newEmail.toLowerCase() !== editTarget.email.toLowerCase()) {
+      try {
+        await updateEmail(editTarget.id, newEmail)
+      } catch (err) {
+        setEditError(err.message)
+        setSaving(false)
+        return
+      }
+    }
+
+    const { error: err } = await supabase
+      .from('staff_profiles')
+      .update({
+        display_name: editForm.display_name.trim(),
+        role: editForm.role,
+        class_id: editForm.class_id || null,
+      })
+      .eq('id', editTarget.id)
+
     setSaving(false)
+
+    if (err) {
+      setEditError('Something went wrong saving the profile. Please try again.')
+      return
+    }
     setEditTarget(null)
     load()
   }
@@ -258,7 +282,17 @@ export default function AdminStaff() {
                   <button
                     onClick={() => {
                       setEditTarget(member)
-                      setEditForm({ role: member.role, class_id: member.class_id || '' })
+                      setEditError(null)
+                      const localEmail =
+                        emailDomain && member.email.toLowerCase().endsWith(`@${emailDomain.toLowerCase()}`)
+                          ? member.email.slice(0, -(emailDomain.length + 1))
+                          : member.email
+                      setEditForm({
+                        display_name: member.display_name,
+                        email: localEmail,
+                        role: member.role,
+                        class_id: member.class_id || '',
+                      })
                     }}
                     className="text-blue-600 hover:underline text-xs mr-3"
                   >
@@ -395,9 +429,44 @@ export default function AdminStaff() {
       {/* Edit staff modal */}
       {editTarget && (
         <Modal title="Edit Staff" onClose={() => setEditTarget(null)}>
-          <p className="text-sm text-gray-600 mb-4">
-            Editing <strong>{editTarget.display_name}</strong>
-          </p>
+          {editError && (
+            <div className="bg-red-50 text-red-700 text-sm px-3 py-2 rounded-lg mb-4">
+              {editError}
+            </div>
+          )}
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={editForm.display_name}
+              onChange={(e) => setEditForm((f) => ({ ...f, display_name: e.target.value }))}
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            {emailDomain ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="name"
+                />
+                <span className="text-gray-500 text-sm whitespace-nowrap">@{emailDomain}</span>
+              </div>
+            ) : (
+              <input
+                type="email"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={editForm.email}
+                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+              />
+            )}
+          </div>
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>

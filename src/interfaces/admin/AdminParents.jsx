@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../hooks/useAuth'
-import { listUsers, createUser, deleteUser, setPassword } from '../../adminUsers'
+import { listUsers, createUser, deleteUser, setPassword, updateEmail } from '../../adminUsers'
 
 function Modal({ title, onClose, children }) {
   return (
@@ -42,6 +42,10 @@ export default function AdminParents() {
   const [resetError, setResetError] = useState(null)
   const [resetSaving, setResetSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [editTarget, setEditTarget] = useState(null)
+  const [editForm, setEditForm] = useState({ email: '' })
+  const [editError, setEditError] = useState(null)
+  const [editSaving, setEditSaving] = useState(false)
 
   useEffect(() => {
     if (!nurseryId) return
@@ -172,6 +176,31 @@ export default function AdminParents() {
     load()
   }
 
+  const saveEdit = async () => {
+    if (!editForm.email.trim()) {
+      setEditError('Email is required.')
+      return
+    }
+
+    setEditSaving(true)
+    setEditError(null)
+
+    const newEmail = emailDomain ? `${editForm.email.trim().toLowerCase()}@${emailDomain}` : editForm.email.trim()
+    if (newEmail.toLowerCase() !== editTarget.email.toLowerCase()) {
+      try {
+        await updateEmail(editTarget.id, newEmail)
+      } catch (err) {
+        setEditError(err.message)
+        setEditSaving(false)
+        return
+      }
+    }
+
+    setEditSaving(false)
+    setEditTarget(null)
+    load()
+  }
+
   const grouped = useMemo(() => {
     const q = search.trim().toLowerCase()
     const filtered = q
@@ -258,6 +287,20 @@ export default function AdminParents() {
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{p.email}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <button
+                        onClick={() => {
+                          setEditTarget(p)
+                          setEditError(null)
+                          const localEmail =
+                            emailDomain && p.email.toLowerCase().endsWith(`@${emailDomain.toLowerCase()}`)
+                              ? p.email.slice(0, -(emailDomain.length + 1))
+                              : p.email
+                          setEditForm({ email: localEmail })
+                        }}
+                        className="text-blue-600 hover:underline text-xs mr-3"
+                      >
+                        Edit
+                      </button>
                       <button
                         onClick={() => setResetTarget(p)}
                         className="text-blue-600 hover:underline text-xs mr-3"
@@ -353,6 +396,61 @@ export default function AdminParents() {
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
               {saving ? 'Creating…' : 'Create Account'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Edit parent modal */}
+      {editTarget && (
+        <Modal
+          title="Edit Parent"
+          onClose={() => { setEditTarget(null); setEditError(null) }}
+        >
+          {editError && (
+            <div className="bg-red-50 text-red-700 text-sm px-3 py-2 rounded-lg mb-4">{editError}</div>
+          )}
+          <p className="text-sm text-gray-600 mb-4">
+            Editing account for{' '}
+            <strong>{editTarget.childName || editTarget.email}</strong>
+          </p>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            {emailDomain ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="name"
+                />
+                <span className="text-gray-500 text-sm whitespace-nowrap">@{emailDomain}</span>
+              </div>
+            ) : (
+              <input
+                type="email"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={editForm.email}
+                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+              />
+            )}
+          </div>
+
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => { setEditTarget(null); setEditError(null) }}
+              className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={saveEdit}
+              disabled={editSaving}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              {editSaving ? 'Saving…' : 'Save'}
             </button>
           </div>
         </Modal>

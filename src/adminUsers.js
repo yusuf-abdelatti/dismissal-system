@@ -45,6 +45,10 @@ export function setPassword(userId, password) {
   return callAdminUsers({ action: 'setPassword', userId, password })
 }
 
+export function updateEmail(userId, email) {
+  return callAdminUsers({ action: 'updateEmail', userId, email }).then((data) => data.user)
+}
+
 export function deleteNursery(nurseryId) {
   return callAdminUsers({ action: 'deleteNursery', nurseryId })
 }

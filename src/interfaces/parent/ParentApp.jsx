@@ -69,6 +69,7 @@ export default function ParentApp() {
   const [goodbyeMessage, setGoodbyeMessage] = useState(null)
   const [confirmingCancel, setConfirmingCancel] = useState(false)
   const channelRef = useRef(null)
+  const childIdRef = useRef(null)
   const { status, errorMsg, isSupported, subscribe } = usePushNotifications(user?.id)
 
   const today = new Date().toISOString().split('T')[0]
@@ -77,7 +78,22 @@ export default function ParentApp() {
     if (!user) return
     loadChild()
 
+    // Mobile Safari/PWA can silently drop the realtime connection while
+    // backgrounded (phone locked, app switched away from) without visibly
+    // erroring - reopening the tab would otherwise keep showing whatever
+    // stale state it had before going to sleep. Refresh + resubscribe from
+    // scratch whenever the app becomes visible again, same as the
+    // staff/display board already does.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && childIdRef.current) {
+        loadTodayRequest(childIdRef.current)
+        subscribeToChild(childIdRef.current)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       if (channelRef.current) supabase.removeChannel(channelRef.current)
     }
   }, [user])
@@ -100,21 +116,29 @@ export default function ParentApp() {
     }
 
     setChild(childData)
+    childIdRef.current = childData.id
     await loadTodayRequest(childData.id)
     subscribeToChild(childData.id)
     setLoadingData(false)
   }
 
   const loadTodayRequest = async (childId) => {
+    // Ordered + limited to one instead of .maybeSingle(): if more than one
+    // active row ever exists, maybeSingle() errors out silently and the
+    // caller sees "no active request" even though one clearly does - exactly
+    // the confusing state a stale/duplicate request produced in the past.
+    // A DB constraint now prevents duplicates outright, but this stays
+    // defensive rather than fragile.
     const { data } = await supabase
       .from('pickup_requests')
       .select('*')
       .eq('child_id', childId)
       .eq('date', today)
       .not('status', 'in', '(delivered,cleared)')
-      .maybeSingle()
+      .order('requested_at', { ascending: false })
+      .limit(1)
 
-    setRequest(data ?? null)
+    setRequest(data?.[0] ?? null)
   }
 
   const subscribeToChild = (childId) => {
