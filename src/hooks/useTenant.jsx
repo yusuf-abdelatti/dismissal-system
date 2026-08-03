@@ -8,6 +8,7 @@ const DEFAULT_TENANT = {
   id: null,
   slug: null,
   name: 'Finnly',
+  pwaShortName: 'Finnly',
   logoUrl: '/finnly-logo.png',
   iconUrl: '/icon.png',
   primaryColor: '#6B9BAF',
@@ -45,7 +46,9 @@ function setLink(rel, href) {
 function applyBranding(tenant) {
   document.title = tenant.name
   setMeta('theme-color', tenant.primaryColor)
-  setMeta('apple-mobile-web-app-title', tenant.name)
+  // iOS shows this under the home-screen icon, so it should use the
+  // (optionally shorter) install name, not the full nursery name.
+  setMeta('apple-mobile-web-app-title', tenant.pwaShortName || tenant.name)
   if (tenant.iconUrl || tenant.logoUrl) setLink('apple-touch-icon', tenant.iconUrl || tenant.logoUrl)
 }
 
@@ -100,6 +103,7 @@ export function TenantProvider({ children }) {
             const updated = {
               ...t,
               name: row.name ?? t.name,
+              pwaShortName: row.pwa_short_name || row.name || t.pwaShortName,
               logoUrl: row.logo_url ?? t.logoUrl,
               iconUrl: row.icon_url || row.logo_url || t.iconUrl,
               primaryColor: row.primary_color ?? t.primaryColor,

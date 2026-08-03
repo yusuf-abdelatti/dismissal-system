@@ -24,6 +24,7 @@ function Modal({ title, onClose, children }) {
 function toForm(nursery) {
   return {
     name: nursery.name,
+    pwa_short_name: nursery.pwa_short_name || '',
     logo_url: nursery.logo_url || '',
     icon_url: nursery.icon_url || '',
     pickup_countdown_minutes: Math.round(nursery.pickup_countdown_seconds / 60),
@@ -96,6 +97,7 @@ export default function AdminSettings() {
       .from('nurseries')
       .update({
         name: form.name.trim(),
+        pwa_short_name: form.pwa_short_name.trim() || null,
         logo_url: form.logo_url || null,
         icon_url: form.icon_url || null,
         pickup_countdown_seconds: Math.max(1, Number(form.pickup_countdown_minutes) || 10) * 60,
@@ -168,6 +170,23 @@ export default function AdminSettings() {
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Home Screen Name <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={form.pwa_short_name}
+            onChange={(e) => setForm((f) => ({ ...f, pwa_short_name: e.target.value }))}
+            placeholder={form.name}
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            Shown under the icon after installing the app to a phone's home screen — useful if the full name above
+            is too long to fit. Leave blank to just use the full name.
+          </p>
         </div>
 
         <div className="mb-4">

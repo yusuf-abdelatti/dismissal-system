@@ -43,7 +43,7 @@ function getAdminClient() {
 }
 
 const NURSERY_FIELDS =
-  'id, slug, name, logo_url, icon_url, primary_color, secondary_color, background_color, pickup_countdown_seconds, is_active'
+  'id, slug, name, pwa_short_name, logo_url, icon_url, primary_color, secondary_color, background_color, pickup_countdown_seconds, is_active'
 
 // `?slug=` query override lets a plain (non-subdomain) preview/dev URL still
 // pick a tenant for testing without needing wildcard DNS set up yet.
@@ -66,6 +66,9 @@ export function toPublicNursery(nursery) {
     id: nursery.id,
     slug: nursery.slug,
     name: nursery.name,
+    // Shown under the home-screen icon once installed; falls back to the
+    // full name for nurseries that haven't set a shorter one.
+    pwaShortName: nursery.pwa_short_name || nursery.name,
     logoUrl: nursery.logo_url,
     // Falls back to logo_url so nurseries that haven't uploaded a dedicated
     // square icon yet still get a working PWA/home-screen icon.

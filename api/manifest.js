@@ -14,13 +14,14 @@ export default async function handler(req, res) {
   const nursery = await getNurseryForRequest(req)
 
   const name = nursery?.name || 'Dismissal System'
+  const shortName = nursery?.pwa_short_name || name
   const icon = nursery?.icon_url || nursery?.logo_url || '/icon.png'
   const iconType = guessMimeType(icon)
 
   res.status(200).send(
     JSON.stringify({
       name,
-      short_name: name,
+      short_name: shortName,
       start_url: '/',
       display: 'standalone',
       background_color: nursery?.background_color || '#EAE5DF',
