@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { TenantProvider, useTenant } from './hooks/useTenant'
 import LoginPage from './components/LoginPage'
+import InstallGuide from './components/InstallGuide'
 import ProtectedRoute from './components/ProtectedRoute'
 import ParentApp from './interfaces/parent/ParentApp'
 import DisplayScreen from './interfaces/display/DisplayScreen'
@@ -49,6 +50,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/installing" element={<InstallGuide />} />
       <Route path="/" element={<RootRedirect />} />
 
       <Route
