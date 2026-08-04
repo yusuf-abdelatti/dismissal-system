@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useTenant } from '../hooks/useTenant'
 
 function detectDevice() {
@@ -161,10 +162,23 @@ export default function InstallGuide() {
             </div>
 
             {autoDetected && (
-              <p className="text-center text-xs" style={{ color: '#8A8478' }}>
+              <p className="text-center text-xs mb-4" style={{ color: '#8A8478' }}>
                 Detected automatically — not your phone? Pick the other option above.
               </p>
             )}
+
+            <div className="border-t pt-5 mt-1" style={{ borderColor: '#E0DBD3' }}>
+              <p className="text-center text-xs mb-3" style={{ color: '#8A8478' }}>
+                Already added the app to your Home Screen?
+              </p>
+              <Link
+                to="/login"
+                className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl shadow-md active:scale-[0.98] transition-transform"
+                style={{ backgroundColor: tenant.primaryColor }}
+              >
+                Continue to Sign In →
+              </Link>
+            </div>
           </div>
         )}
       </div>
