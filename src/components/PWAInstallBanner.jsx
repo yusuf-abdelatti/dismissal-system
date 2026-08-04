@@ -62,6 +62,9 @@ export default function PWAInstallBanner() {
 
   useEffect(() => {
     if (pathname.startsWith('/display')) return
+    // The /installing page is itself a full install walkthrough, so the
+    // floating banner on top of it would just be redundant.
+    if (pathname.startsWith('/installing')) return
     if (isStandalone()) return
     if (localStorage.getItem(DISMISSED_KEY)) return
 
