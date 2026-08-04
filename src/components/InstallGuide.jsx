@@ -13,6 +13,10 @@ const DEVICES = {
     label: 'iPhone',
     sublabel: 'Safari',
     video: '/videos/install-ios.mp4',
+    browserNote: (
+      <>Make sure you're using <strong>Safari</strong> — other browsers (like Chrome) can't add this app to your
+        Home Screen on iPhone, and you won't get pickup notifications.</>
+    ),
     steps: [
       <>Tap the <strong>Share</strong> button at the bottom of Safari</>,
       <>Scroll down and tap <strong>"Add to Home Screen"</strong></>,
@@ -23,6 +27,10 @@ const DEVICES = {
     label: 'Android',
     sublabel: 'Chrome',
     video: '/videos/install-android.mp4',
+    browserNote: (
+      <>Make sure you're using <strong>Chrome</strong> — other browsers may not support installing the app or
+        sending you pickup notifications.</>
+    ),
     steps: [
       <>Tap the <strong>⋮ menu</strong> in the top-right of Chrome</>,
       <>Tap <strong>"Install app"</strong> (or <strong>"Add to Home screen"</strong>)</>,
@@ -108,6 +116,16 @@ export default function InstallGuide() {
 
         {info && (
           <div>
+            <div
+              className="flex items-start gap-2.5 rounded-xl px-3.5 py-3 mb-5 border"
+              style={{ backgroundColor: '#FBF3E4', borderColor: tenant.secondaryColor }}
+            >
+              <span className="text-base leading-none flex-shrink-0" aria-hidden="true">⚠️</span>
+              <p className="text-xs leading-snug" style={{ color: '#5A4A2A' }}>
+                {info.browserNote}
+              </p>
+            </div>
+
             <div className="rounded-2xl overflow-hidden shadow-lg mb-5 bg-black">
               <video
                 key={device}
