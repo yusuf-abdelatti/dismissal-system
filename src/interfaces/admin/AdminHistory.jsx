@@ -1,6 +1,27 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
 
+function Modal({ title, onClose, children }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 px-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+          >
+            ×
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+const ACTIVE_STATUSES = ['requested', 'ready', 'arrived']
+
 const STATUS_STYLES = {
   requested: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Requested' },
   ready: { bg: 'bg-green-100', text: 'text-green-700', label: 'Ready' },
@@ -24,6 +45,9 @@ export default function AdminHistory() {
   const [date, setDate] = useState(todayLocal())
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
+  const [deliverTarget, setDeliverTarget] = useState(null)
+  const [delivering, setDelivering] = useState(false)
+  const [deliverError, setDeliverError] = useState(null)
 
   useEffect(() => {
     load()
@@ -39,6 +63,29 @@ export default function AdminHistory() {
 
     setRequests(data || [])
     setLoading(false)
+  }
+
+  const markDelivered = async () => {
+    if (!deliverTarget) return
+    setDelivering(true)
+    setDeliverError(null)
+
+    // Scoped to this exact row by id — only this request's status/delivered_at
+    // change, nothing else on the table is touched.
+    const { error: err } = await supabase
+      .from('pickup_requests')
+      .update({ status: 'delivered', delivered_at: new Date().toISOString() })
+      .eq('id', deliverTarget.id)
+
+    setDelivering(false)
+
+    if (err) {
+      setDeliverError('Something went wrong. Please try again.')
+      return
+    }
+
+    setDeliverTarget(null)
+    load()
   }
 
   return (
@@ -71,6 +118,7 @@ export default function AdminHistory() {
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Requested</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Arrived</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Delivered</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -79,6 +127,7 @@ export default function AdminHistory() {
                 const cls = child?.classes
                 const style = STATUS_STYLES[req.status] || STATUS_STYLES.requested
                 const color = cls?.color || '#6B7280'
+                const canMarkDelivered = ACTIVE_STATUSES.includes(req.status)
 
                 return (
                   <tr key={req.id} className="border-b last:border-0 hover:bg-gray-50">
@@ -101,12 +150,54 @@ export default function AdminHistory() {
                     <td className="px-4 py-3 text-gray-500 tabular-nums">{formatTime(req.requested_at)}</td>
                     <td className="px-4 py-3 text-gray-500 tabular-nums">{formatTime(req.arrived_at)}</td>
                     <td className="px-4 py-3 text-gray-500 tabular-nums">{formatTime(req.delivered_at)}</td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      {canMarkDelivered && (
+                        <button
+                          onClick={() => { setDeliverTarget(req); setDeliverError(null) }}
+                          className="text-blue-600 hover:underline text-xs"
+                        >
+                          Mark Delivered
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
         </div>
+      )}
+
+      {deliverTarget && (
+        <Modal
+          title="Mark as Delivered"
+          onClose={() => { setDeliverTarget(null); setDeliverError(null) }}
+        >
+          {deliverError && (
+            <div className="bg-red-50 text-red-700 text-sm px-3 py-2 rounded-lg mb-4">{deliverError}</div>
+          )}
+          <p className="text-sm text-gray-700 mb-5">
+            Mark <strong>{deliverTarget.children?.full_name || 'this child'}</strong>'s pickup request as{' '}
+            <strong>Delivered</strong>? Use this when the child was actually picked up but the request wasn't
+            closed out on the staff app — it records a delivery time, unlike "Reset Today's Requests" which
+            just clears requests without marking them delivered.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => { setDeliverTarget(null); setDeliverError(null) }}
+              className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={markDelivered}
+              disabled={delivering}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              {delivering ? 'Saving…' : 'Mark Delivered'}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   )
