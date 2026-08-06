@@ -26,6 +26,14 @@ export default function AdminRequests() {
     // real-time subscription in the hook will re-fetch automatically
   }
 
+  const markDelivered = async (id) => {
+    await supabase
+      .from('pickup_requests')
+      .update({ status: 'delivered', delivered_at: new Date().toISOString() })
+      .eq('id', id)
+    // real-time subscription in the hook will re-fetch automatically
+  }
+
   const clearAll = async () => {
     setShowConfirm(false)
     setClearing(true)
@@ -101,7 +109,13 @@ export default function AdminRequests() {
                     <td className="px-4 py-3 text-gray-500 tabular-nums">
                       {formatTime(req.requested_at)}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <button
+                        onClick={() => markDelivered(req.id)}
+                        className="text-blue-600 hover:underline text-xs mr-3"
+                      >
+                        Mark Delivered
+                      </button>
                       <button
                         onClick={() => clearRequest(req.id)}
                         className="text-red-500 hover:underline text-xs"
