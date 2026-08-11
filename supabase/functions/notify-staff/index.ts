@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
 
     const { data: child } = await supabase
       .from('children')
-      .select('class_id, full_name, nurseries(logo_url)')
+      .select('class_id, nursery_id, full_name, nurseries(logo_url)')
       .eq('id', record.child_id)
       .single()
 
@@ -67,10 +67,18 @@ Deno.serve(async (req) => {
       ? { title: '⚡ Parent Has Arrived!', body: `${firstName}'s parent is at the door`, icon }
       : { title: '🔔 New Pickup Request', body: `${firstName} needs to be picked up`, icon }
 
+    // Staff assigned to this exact class, plus any staff with no class
+    // assigned at all (the "all classes" backup/floater role) - excluding
+    // display screens, which already show live updates on their own and
+    // don't need a push. class_id is a globally unique uuid, so the OR
+    // can't accidentally match another nursery's "no class assigned" staff;
+    // the nursery_id filter still scopes it explicitly for clarity/safety.
     const { data: staffRows } = await supabase
       .from('staff_profiles')
       .select('id')
-      .eq('class_id', child.class_id)
+      .eq('nursery_id', child.nursery_id)
+      .neq('role', 'display')
+      .or(`class_id.eq.${child.class_id},class_id.is.null`)
 
     if (!staffRows?.length) return new Response('ok')
 
