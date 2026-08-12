@@ -20,6 +20,7 @@ export default function RequestRow({ request, tick }) {
   const isArrived = request.status === 'arrived'
   const isReady = request.status === 'ready'
   const isEscalated = isArrived && overdue
+  const isReadyEscalated = isReady && overdue
 
   return (
     <div
@@ -68,7 +69,18 @@ export default function RequestRow({ request, tick }) {
             </span>
           )
         ) : isReady ? (
-          <span className="text-green-400 font-black text-2xl">Ready</span>
+          isReadyEscalated ? (
+            <span className="font-black text-xl tracking-wide text-amber-400">
+              🌟 READY — WAITING
+            </span>
+          ) : (
+            <span className="font-black text-2xl tracking-wide text-green-400">
+              Ready
+              {countdownText && (
+                <span className="ml-2 text-base font-bold text-gray-300 tabular-nums">{countdownText}</span>
+              )}
+            </span>
+          )
         ) : countdownText ? (
           <span className="text-gray-200 text-2xl font-bold tabular-nums">
             {countdownText}

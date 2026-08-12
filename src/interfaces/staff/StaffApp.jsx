@@ -37,9 +37,16 @@ function CountdownBadge({ requestedAt, status, durationSeconds }) {
   }
 
   if (status === 'ready') {
+    if (overdue) {
+      return (
+        <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 font-bold text-sm px-3 py-1 rounded-full animate-pulse">
+          🌟 READY — WAITING
+        </span>
+      )
+    }
     return (
-      <span className="inline-flex items-center bg-green-100 text-green-700 font-semibold text-sm px-3 py-1 rounded-full">
-        Ready
+      <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 font-semibold text-sm px-3 py-1 rounded-full whitespace-nowrap">
+        Ready{text ? ` · ${text}` : ''}
       </span>
     )
   }
