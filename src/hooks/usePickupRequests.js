@@ -66,8 +66,18 @@ export function usePickupRequests() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
+    // Safety net for kiosk-style screens (the display board) that never go
+    // hidden, so the visibilitychange resync above never fires for them —
+    // if the realtime socket silently dies after hours of uptime (idle
+    // proxy timeout, brief network drop) with nothing to trigger a resync,
+    // a long-running screen could keep showing a stale request indefinitely.
+    // This guarantees it self-heals within one interval regardless of why
+    // realtime stopped, without touching the realtime path itself.
+    const pollInterval = setInterval(fetchRequests, 30000)
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      clearInterval(pollInterval)
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
       }
