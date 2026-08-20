@@ -41,12 +41,14 @@ function IdleGallery({ images }) {
   if (images.length === 0) return null
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-[#0F1117] p-10">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F1117]">
       <img
         key={images[index].url}
         src={images[index].url}
         alt=""
-        className="max-w-full max-h-full object-contain rounded-2xl"
+        // object-contain + max-w/h-full means any image size or aspect
+        // ratio fits the full screen without cropping or distortion.
+        className="max-w-full max-h-full object-contain"
       />
     </div>
   )
@@ -138,6 +140,13 @@ function LiveBoard({ audioCtx, tenant }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sorted.length, tick, loading])
 
+  // Idle gallery takes over the entire screen — header included — so it's
+  // the only thing showing, not squeezed into the list area below a clock.
+  const idleActive = !loading && sorted.length === 0 && showIdle && idleImages.length > 0
+  if (idleActive) {
+    return <IdleGallery images={idleImages} />
+  }
+
   return (
     <div className="min-h-screen bg-[#0F1117] flex flex-col font-mono">
       {/* Header */}
@@ -168,11 +177,7 @@ function LiveBoard({ audioCtx, tenant }) {
           </div>
         )}
 
-        {!loading && sorted.length === 0 && showIdle && idleImages.length > 0 && (
-          <IdleGallery images={idleImages} />
-        )}
-
-        {!loading && sorted.length === 0 && !(showIdle && idleImages.length > 0) && (
+        {!loading && sorted.length === 0 && (
           <div className="text-gray-700 text-center py-20 text-xl">
             No active pickup requests
           </div>
