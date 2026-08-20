@@ -14,6 +14,11 @@ export function isOverdue(requestedAt, durationSeconds = DEFAULT_DURATION) {
   return getRemainingSeconds(requestedAt, durationSeconds) <= 0
 }
 
+// How long past the window a still-unhandled request is — 0 while within it.
+export function getOverdueSeconds(requestedAt, durationSeconds = DEFAULT_DURATION) {
+  return Math.max(0, -getRemainingSeconds(requestedAt, durationSeconds))
+}
+
 export function formatCountdown(seconds) {
   if (seconds <= 0) return null // caller shows "Arriving Soon"
   const m = Math.floor(seconds / 60).toString().padStart(2, '0')

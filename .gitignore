@@ -2,9 +2,13 @@ node_modules
 dist
 .env.local
 
-# Contains real children's names/birthdates — never commit
+# Contains real children's names/birthdates/passwords — never commit
 Children List.xlsx
 excel_dump.txt
+*CONFIDENTIAL*
+Login Info - Finnly/
+Login Info - Finnly.zip
 
 # Marketing/business files, not code
 *.pptx
+*.mp4

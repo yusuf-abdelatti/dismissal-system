@@ -10,3 +10,12 @@
 .arrived-pulse {
   animation: pulse-row 1.5s ease-in-out infinite;
 }
+
+@keyframes pulse-row-escalated {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.01); }
+}
+
+.escalated-pulse {
+  animation: pulse-row-escalated 1s ease-in-out infinite;
+}

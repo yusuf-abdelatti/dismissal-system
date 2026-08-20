@@ -43,7 +43,7 @@ function getAdminClient() {
 }
 
 const NURSERY_FIELDS =
-  'id, slug, name, pwa_short_name, logo_url, icon_url, primary_color, secondary_color, background_color, pickup_countdown_seconds, is_active'
+  'id, slug, name, pwa_short_name, logo_url, icon_url, primary_color, secondary_color, background_color, pickup_countdown_seconds, timezone, requests_open_time, is_active'
 
 // `?slug=` query override lets a plain (non-subdomain) preview/dev URL still
 // pick a tenant for testing without needing wildcard DNS set up yet.
@@ -77,5 +77,7 @@ export function toPublicNursery(nursery) {
     secondaryColor: nursery.secondary_color,
     backgroundColor: nursery.background_color,
     pickupCountdownSeconds: nursery.pickup_countdown_seconds,
+    timezone: nursery.timezone,
+    requestsOpenTime: nursery.requests_open_time,
   }
 }

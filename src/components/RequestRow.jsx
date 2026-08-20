@@ -1,4 +1,4 @@
-import { getCountdownSeconds, formatCountdown, isOverdue } from '../utils/countdown'
+import { getCountdownSeconds, formatCountdown, isOverdue, getOverdueSeconds } from '../utils/countdown'
 import { useTenant } from '../hooks/useTenant'
 
 export default function RequestRow({ request, tick }) {
@@ -16,6 +16,7 @@ export default function RequestRow({ request, tick }) {
   const remaining = getCountdownSeconds(request.requested_at, duration)
   const countdownText = formatCountdown(remaining)
   const overdue = isOverdue(request.requested_at, duration)
+  const waitedText = formatCountdown(getOverdueSeconds(request.requested_at, duration))
 
   const isArrived = request.status === 'arrived'
   const isReady = request.status === 'ready'
@@ -26,22 +27,26 @@ export default function RequestRow({ request, tick }) {
     <div
       className={`flex items-center px-6 rounded-lg mb-1.5 transition-all ${
         isArrived ? 'arrived-pulse' : ''
-      }`}
+      } ${isEscalated ? 'escalated-pulse' : ''}`}
       style={{
-        height: '60px',
-        backgroundColor: isEscalated ? 'rgba(220,38,38,0.15)' : `${classColor}12`,
-        borderLeft: `5px solid ${isEscalated ? '#DC2626' : classColor}`,
-        boxShadow: isArrived ? `0 0 18px ${isEscalated ? '#DC262699' : `${classColor}66`}` : 'none',
+        height: isEscalated ? '84px' : '60px',
+        backgroundColor: isEscalated ? 'rgba(220,38,38,0.2)' : `${classColor}12`,
+        borderLeft: `${isEscalated ? 10 : 5}px solid ${isEscalated ? '#DC2626' : classColor}`,
+        boxShadow: isEscalated
+          ? '0 0 30px #DC2626aa'
+          : isArrived
+            ? `0 0 18px ${classColor}66`
+            : 'none',
       }}
     >
       {/* Class color dot */}
       <div
-        className="w-4 h-4 rounded-full flex-shrink-0 mr-4"
+        className={`rounded-full flex-shrink-0 mr-4 ${isEscalated ? 'w-5 h-5' : 'w-4 h-4'}`}
         style={{ backgroundColor: classColor }}
       />
 
       {/* Child name */}
-      <div className="flex-1 text-3xl font-black text-white truncate mr-6">
+      <div className={`flex-1 font-black text-white truncate mr-6 ${isEscalated ? 'text-4xl' : 'text-3xl'}`}>
         {childName}
       </div>
 
@@ -54,11 +59,14 @@ export default function RequestRow({ request, tick }) {
       </div>
 
       {/* Status / countdown */}
-      <div className="w-60 text-right shrink-0 font-mono whitespace-nowrap overflow-hidden">
+      <div className="w-64 text-right shrink-0 font-mono whitespace-nowrap overflow-hidden">
         {isArrived ? (
           isEscalated ? (
-            <span className="font-black text-xl tracking-wide text-red-400">
-              ⚡ ARRIVED — WAITING
+            <span className="font-black text-2xl tracking-wide text-red-300">
+              ⚡ WAITING
+              {waitedText && (
+                <span className="ml-2 text-lg font-bold text-red-200 tabular-nums">{waitedText}</span>
+              )}
             </span>
           ) : (
             <span className="font-black text-xl tracking-wide text-white">

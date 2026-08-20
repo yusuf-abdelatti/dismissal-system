@@ -4,6 +4,20 @@ import { useAuth } from '../../hooks/useAuth'
 import { useTenant } from '../../hooks/useTenant'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
 import { getCountdownSeconds, formatCountdown, isOverdue } from '../../utils/countdown'
+import { isRequestsOpen, formatOpenTimeLabel } from '../../utils/openingHours'
+
+// Re-checks the opening-hours gate every 30s so a parent who has the app
+// open right as the cutoff passes sees the button activate on its own,
+// without needing to refresh.
+function useRequestsOpen(tenant) {
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 30000)
+    return () => clearInterval(t)
+  }, [])
+  void tick
+  return isRequestsOpen(tenant)
+}
 
 function Countdown({ requestedAt, durationSeconds, className }) {
   const [tick, setTick] = useState(0)
@@ -60,6 +74,7 @@ function deliveryMessageFor(request, durationSeconds) {
 export default function ParentApp() {
   const { user } = useAuth()
   const { tenant } = useTenant()
+  const requestsOpen = useRequestsOpen(tenant)
   const [child, setChild] = useState(null)
   const [request, setRequest] = useState(null)
   const [loadingData, setLoadingData] = useState(true)
@@ -329,15 +344,35 @@ export default function ParentApp() {
             {errorMsg && (
               <p className="text-red-600 text-xs mb-4">{errorMsg}</p>
             )}
-            <p className="text-gray-500 mb-8 text-lg">Ready for pickup?</p>
-            <button
-              onClick={requestPickup}
-              disabled={actionLoading}
-              className="w-full text-white font-semibold text-xl py-5 rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
-              style={{ backgroundColor: tenant.primaryColor, minHeight: '72px' }}
-            >
-              {actionLoading ? 'Sending…' : 'Request Pickup'}
-            </button>
+            {requestsOpen ? (
+              <>
+                <p className="text-gray-500 mb-8 text-lg">Ready for pickup?</p>
+                <button
+                  onClick={requestPickup}
+                  disabled={actionLoading}
+                  className="w-full text-white font-semibold text-xl py-5 rounded-2xl shadow-lg active:scale-95 transition-all disabled:opacity-50"
+                  style={{ backgroundColor: tenant.primaryColor, minHeight: '72px' }}
+                >
+                  {actionLoading ? 'Sending…' : 'Request Pickup'}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="bg-gray-100 border border-gray-200 rounded-xl px-5 py-4 mb-8">
+                  <p className="text-gray-600 text-base font-medium">
+                    Pickup requests open at {formatOpenTimeLabel(tenant.requestsOpenTime)} today.
+                  </p>
+                  <p className="text-gray-400 text-sm mt-1">Please check back then 💛</p>
+                </div>
+                <button
+                  disabled
+                  className="w-full text-gray-400 bg-gray-200 font-semibold text-xl py-5 rounded-2xl cursor-not-allowed"
+                  style={{ minHeight: '72px' }}
+                >
+                  Not Open Yet
+                </button>
+              </>
+            )}
           </div>
         )}
 

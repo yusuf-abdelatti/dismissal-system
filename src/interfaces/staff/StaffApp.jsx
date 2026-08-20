@@ -5,7 +5,7 @@ import { useTenant } from '../../hooks/useTenant'
 import { usePickupRequests } from '../../hooks/usePickupRequests'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
 import { sortRequests } from '../../utils/sorting'
-import { getCountdownSeconds, formatCountdown, isOverdue } from '../../utils/countdown'
+import { getCountdownSeconds, formatCountdown, isOverdue, getOverdueSeconds } from '../../utils/countdown'
 
 function CountdownBadge({ requestedAt, status, durationSeconds }) {
   const [tick, setTick] = useState(0)
@@ -23,9 +23,10 @@ function CountdownBadge({ requestedAt, status, durationSeconds }) {
 
   if (status === 'arrived') {
     if (overdue) {
+      const waitedText = formatCountdown(getOverdueSeconds(requestedAt, durationSeconds))
       return (
-        <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 font-bold text-sm px-3 py-1 rounded-full animate-pulse">
-          ⚡ ARRIVED — WAITING
+        <span className="inline-flex items-center gap-1.5 bg-red-100 text-red-700 font-black text-base px-4 py-1.5 rounded-full animate-pulse">
+          ⚡ WAITING{waitedText ? ` · ${waitedText}` : ''}
         </span>
       )
     }

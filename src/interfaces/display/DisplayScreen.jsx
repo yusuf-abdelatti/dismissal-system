@@ -6,6 +6,52 @@ import { sortRequests } from '../../utils/sorting'
 import { playNewRequestSound, playArrivalSound } from '../../utils/sound'
 import RequestRow from '../../components/RequestRow'
 
+// How long the board must sit with zero active requests before the idle
+// image rotation takes over — avoids flickering into the gallery during a
+// brief natural lull between one dismissal and the next.
+const IDLE_DELAY_MS = 5 * 60 * 1000
+const IDLE_IMAGE_INTERVAL_MS = 8000
+
+function useIdleImages(nurseryId) {
+  const [images, setImages] = useState([])
+
+  useEffect(() => {
+    if (!nurseryId) return
+    supabase
+      .from('nursery_idle_images')
+      .select('url')
+      .eq('nursery_id', nurseryId)
+      .order('position', { ascending: true })
+      .then(({ data }) => setImages(data || []))
+  }, [nurseryId])
+
+  return images
+}
+
+function IdleGallery({ images }) {
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    setIndex(0)
+    if (images.length < 2) return
+    const t = setInterval(() => setIndex((i) => (i + 1) % images.length), IDLE_IMAGE_INTERVAL_MS)
+    return () => clearInterval(t)
+  }, [images])
+
+  if (images.length === 0) return null
+
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-[#0F1117] p-10">
+      <img
+        key={images[index].url}
+        src={images[index].url}
+        alt=""
+        className="max-w-full max-h-full object-contain rounded-2xl"
+      />
+    </div>
+  )
+}
+
 function LiveClock() {
   const [now, setNow] = useState(new Date())
 
@@ -39,6 +85,9 @@ function LiveBoard({ audioCtx, tenant }) {
   const { requests, loading } = usePickupRequests()
   const [tick, setTick] = useState(0)
   const seenRef = useRef({}) // id -> last known status
+  const idleImages = useIdleImages(tenant.id)
+  const [showIdle, setShowIdle] = useState(false)
+  const emptyStartRef = useRef(null)
 
   // Tick every second to drive countdown re-renders
   useEffect(() => {
@@ -71,6 +120,24 @@ function LiveBoard({ audioCtx, tenant }) {
 
   const sorted = sortRequests(requests, tenant.pickupCountdownSeconds)
 
+  // Any active request at all — regardless of status — cancels the idle
+  // gallery immediately. It only comes back after a full 5 quiet minutes.
+  useEffect(() => {
+    if (loading) return
+
+    if (sorted.length > 0) {
+      emptyStartRef.current = null
+      setShowIdle(false)
+      return
+    }
+
+    if (emptyStartRef.current === null) emptyStartRef.current = Date.now()
+    if (Date.now() - emptyStartRef.current >= IDLE_DELAY_MS) setShowIdle(true)
+    // `tick` re-runs this every second while the board sits empty, so the
+    // 5-minute threshold gets caught promptly without its own timer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sorted.length, tick, loading])
+
   return (
     <div className="min-h-screen bg-[#0F1117] flex flex-col font-mono">
       {/* Header */}
@@ -94,14 +161,18 @@ function LiveBoard({ audioCtx, tenant }) {
       </div>
 
       {/* Request list */}
-      <div className="flex-1 px-4 py-4 overflow-auto">
+      <div className="flex-1 px-4 py-4 overflow-auto relative">
         {loading && (
           <div className="text-gray-600 text-center py-20 text-lg">
             Loading…
           </div>
         )}
 
-        {!loading && sorted.length === 0 && (
+        {!loading && sorted.length === 0 && showIdle && idleImages.length > 0 && (
+          <IdleGallery images={idleImages} />
+        )}
+
+        {!loading && sorted.length === 0 && !(showIdle && idleImages.length > 0) && (
           <div className="text-gray-700 text-center py-20 text-xl">
             No active pickup requests
           </div>

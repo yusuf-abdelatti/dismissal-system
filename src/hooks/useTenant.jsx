@@ -15,6 +15,8 @@ const DEFAULT_TENANT = {
   secondaryColor: '#C49A45',
   backgroundColor: '#EAE5DF',
   pickupCountdownSeconds: 600,
+  timezone: 'UTC',
+  requestsOpenTime: null,
 }
 
 const TenantContext = createContext({ tenant: DEFAULT_TENANT, loading: true })
@@ -110,6 +112,11 @@ export function TenantProvider({ children }) {
               secondaryColor: row.secondary_color ?? t.secondaryColor,
               backgroundColor: row.background_color ?? t.backgroundColor,
               pickupCountdownSeconds: row.pickup_countdown_seconds ?? t.pickupCountdownSeconds,
+              timezone: row.timezone ?? t.timezone,
+              // No `??` fallback here: null is a valid, meaningful value
+              // (an admin clearing the restriction back to "always open"),
+              // and postgres_changes always sends the full new row.
+              requestsOpenTime: row.requests_open_time,
             }
             applyBranding(updated)
             return updated

@@ -30,8 +30,14 @@ function toForm(nursery) {
     pickup_countdown_minutes: Math.round(nursery.pickup_countdown_seconds / 60),
     daily_reset_hour: nursery.daily_reset_hour,
     timezone: nursery.timezone,
+    // Stored as "HH:MM:SS" (Postgres `time`) or null — trimmed to "HH:MM"
+    // for the <input type="time"> below.
+    requests_open_time: nursery.requests_open_time ? nursery.requests_open_time.slice(0, 5) : '',
   }
 }
+
+const IDLE_IMAGE_MAX_BYTES = 2 * 1024 * 1024 // 2MB
+const IDLE_IMAGE_MAX_COUNT = 8
 
 export default function AdminSettings() {
   const { nurseryId } = useAuth()
@@ -45,6 +51,86 @@ export default function AdminSettings() {
   const [resetting, setResetting] = useState(false)
   const [resetSuccess, setResetSuccess] = useState(false)
   const [error, setError] = useState(null)
+  const [idleImages, setIdleImages] = useState([])
+  const [uploadingIdle, setUploadingIdle] = useState(false)
+  const [idleError, setIdleError] = useState(null)
+  const [deletingIdleId, setDeletingIdleId] = useState(null)
+
+  const loadIdleImages = () => {
+    if (!nurseryId) return
+    supabase
+      .from('nursery_idle_images')
+      .select('*')
+      .eq('nursery_id', nurseryId)
+      .order('position', { ascending: true })
+      .then(({ data }) => setIdleImages(data || []))
+  }
+
+  useEffect(() => {
+    loadIdleImages()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nurseryId])
+
+  const uploadIdleImage = async (file) => {
+    if (!file || !nursery) return
+    setIdleError(null)
+
+    if (idleImages.length >= IDLE_IMAGE_MAX_COUNT) {
+      setIdleError(`You can have up to ${IDLE_IMAGE_MAX_COUNT} images in the rotation. Remove one first.`)
+      return
+    }
+    if (!file.type.startsWith('image/')) {
+      setIdleError('Please choose an image file.')
+      return
+    }
+    if (file.size > IDLE_IMAGE_MAX_BYTES) {
+      setIdleError(`That image is too large — please keep it under ${IDLE_IMAGE_MAX_BYTES / 1024 / 1024}MB.`)
+      return
+    }
+
+    setUploadingIdle(true)
+
+    const ext = file.name.split('.').pop()
+    const path = `${nursery.slug}-idle-${Date.now()}.${ext}`
+
+    const { error: uploadErr } = await supabase.storage.from('nursery-idle-media').upload(path, file, {
+      cacheControl: '31536000',
+    })
+
+    if (uploadErr) {
+      setIdleError('Upload failed. Please try again.')
+      setUploadingIdle(false)
+      return
+    }
+
+    const { data: urlData } = supabase.storage.from('nursery-idle-media').getPublicUrl(path)
+
+    const { error: insertErr } = await supabase.from('nursery_idle_images').insert({
+      nursery_id: nurseryId,
+      storage_path: path,
+      url: urlData.publicUrl,
+      position: idleImages.length,
+    })
+
+    if (insertErr) {
+      // Don't leave an orphaned file if the DB row failed to save.
+      await supabase.storage.from('nursery-idle-media').remove([path])
+      setIdleError('Upload failed. Please try again.')
+      setUploadingIdle(false)
+      return
+    }
+
+    setUploadingIdle(false)
+    loadIdleImages()
+  }
+
+  const deleteIdleImage = async (image) => {
+    setDeletingIdleId(image.id)
+    await supabase.storage.from('nursery-idle-media').remove([image.storage_path])
+    await supabase.from('nursery_idle_images').delete().eq('id', image.id)
+    setDeletingIdleId(null)
+    loadIdleImages()
+  }
 
   useEffect(() => {
     if (!nurseryId) return
@@ -103,6 +189,7 @@ export default function AdminSettings() {
         pickup_countdown_seconds: Math.max(1, Number(form.pickup_countdown_minutes) || 10) * 60,
         daily_reset_hour: Number(form.daily_reset_hour),
         timezone: form.timezone.trim() || 'UTC',
+        requests_open_time: form.requests_open_time || null,
       })
       .eq('id', nurseryId)
 
@@ -239,6 +326,58 @@ export default function AdminSettings() {
         </div>
       </div>
 
+      {/* Idle screen images */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-4">
+        <h2 className="font-semibold text-gray-900 mb-1">Idle Screen Images</h2>
+        <p className="text-gray-500 text-sm mb-4">
+          Shown on the display board on a loop whenever there are no active pickup requests — disappears the
+          instant one comes in, and only reappears after a full 5 minutes with nothing happening. Images only, up
+          to {IDLE_IMAGE_MAX_COUNT}, {IDLE_IMAGE_MAX_BYTES / 1024 / 1024}MB each.
+        </p>
+
+        {idleError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm">
+            {idleError}
+          </div>
+        )}
+
+        {idleImages.length > 0 && (
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            {idleImages.map((img) => (
+              <div key={img.id} className="relative group">
+                <img
+                  src={img.url}
+                  alt=""
+                  className="w-full aspect-square object-cover rounded-lg border border-gray-200 bg-gray-50"
+                />
+                <button
+                  onClick={() => deleteIdleImage(img)}
+                  disabled={deletingIdleId === img.id}
+                  className="absolute top-1 right-1 bg-black bg-opacity-60 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center hover:bg-opacity-80 disabled:opacity-50"
+                >
+                  {deletingIdleId === img.id ? '…' : '×'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="text-sm text-gray-600"
+          onChange={(e) => {
+            uploadIdleImage(e.target.files?.[0])
+            e.target.value = ''
+          }}
+          disabled={uploadingIdle || idleImages.length >= IDLE_IMAGE_MAX_COUNT}
+        />
+        {uploadingIdle && <p className="text-xs text-gray-400 mt-1">Uploading…</p>}
+        {idleImages.length >= IDLE_IMAGE_MAX_COUNT && (
+          <p className="text-xs text-gray-400 mt-1">Rotation is full — remove an image to add another.</p>
+        )}
+      </div>
+
       {/* Pickup timer + daily reset */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-4">
         <h2 className="font-semibold text-gray-900 mb-1">Pickup Timer & Daily Reset</h2>
@@ -270,7 +409,7 @@ export default function AdminSettings() {
           </div>
         </div>
 
-        <div>
+        <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Timezone <span className="text-gray-400 font-normal">(IANA, e.g. Africa/Cairo)</span>
           </label>
@@ -280,6 +419,31 @@ export default function AdminSettings() {
             value={form.timezone}
             onChange={(e) => setForm((f) => ({ ...f, timezone: e.target.value }))}
           />
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
+            <input
+              type="checkbox"
+              checked={form.requests_open_time !== ''}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, requests_open_time: e.target.checked ? '07:00' : '' }))
+              }
+            />
+            Restrict pickup requests until a set time each day
+          </label>
+          {form.requests_open_time !== '' && (
+            <input
+              type="time"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mt-2"
+              value={form.requests_open_time}
+              onChange={(e) => setForm((f) => ({ ...f, requests_open_time: e.target.value }))}
+            />
+          )}
+          <p className="text-xs text-gray-400 mt-1">
+            Before this time (in the timezone above), parents see a "not open yet" message instead of the pickup
+            button. Unchecked means requests are always open, same as today.
+          </p>
         </div>
       </div>
 
