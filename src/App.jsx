@@ -10,6 +10,7 @@ import StaffApp from './interfaces/staff/StaffApp'
 import AdminDashboard from './interfaces/admin/AdminDashboard'
 import SuperAdminDashboard from './interfaces/superadmin/SuperAdminDashboard'
 import PWAInstallBanner from './components/PWAInstallBanner'
+import FeedbackForm from './interfaces/feedback/FeedbackForm'
 
 const ROLE_REDIRECTS = {
   admin: '/admin',
@@ -51,6 +52,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/installing" element={<InstallGuide />} />
+      <Route path="/dismissal-feedback" element={<FeedbackForm />} />
       <Route path="/" element={<RootRedirect />} />
 
       <Route

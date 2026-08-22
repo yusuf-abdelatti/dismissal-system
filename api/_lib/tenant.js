@@ -31,7 +31,7 @@ export function parseSlugFromHost(hostHeader) {
 }
 
 let adminClient = null
-function getAdminClient() {
+export function getAdminClient() {
   if (!adminClient) {
     adminClient = createClient(
       process.env.VITE_SUPABASE_URL,
