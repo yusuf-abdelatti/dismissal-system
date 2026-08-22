@@ -13,7 +13,7 @@ function formatAnswer(field, answers) {
   return String(v)
 }
 
-export function buildFeedbackPdf({ nurseryName, pilotPeriod, answers, submittedAt }) {
+export function buildFeedbackPdf({ nurseryName, respondentName, pilotPeriod, answers, submittedAt }) {
   return new Promise((resolve) => {
     const doc = new PDFDocument({ size: 'LETTER', margin: 50 })
     const chunks = []
@@ -24,6 +24,7 @@ export function buildFeedbackPdf({ nurseryName, pilotPeriod, answers, submittedA
     doc.moveDown(0.3)
     doc.fillColor(GRAY).font('Helvetica').fontSize(10)
     doc.text(`Nursery: ${nurseryName}`)
+    if (respondentName) doc.text(`Submitted by: ${respondentName}`)
     if (pilotPeriod) doc.text(`Pilot period: ${pilotPeriod}`)
     doc.text(`Submitted: ${new Date(submittedAt).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}`)
     doc.moveDown(1)

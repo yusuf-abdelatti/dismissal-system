@@ -12,3 +12,5 @@ Login Info - Finnly.zip
 # Marketing/business files, not code
 *.pptx
 *.mp4
+.vercel
+.env*

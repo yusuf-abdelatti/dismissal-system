@@ -117,6 +117,7 @@ function Field({ field, value, onChange }) {
 export default function FeedbackForm() {
   const [answers, setAnswers] = useState({})
   const [nurseryName, setNurseryName] = useState('')
+  const [respondentName, setRespondentName] = useState('')
   const [pilotPeriod, setPilotPeriod] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -125,7 +126,7 @@ export default function FeedbackForm() {
   const setAnswer = (key, value) => setAnswers((a) => ({ ...a, [key]: value }))
 
   const requiredMissing = () => {
-    if (!nurseryName) return true
+    if (!nurseryName || !respondentName.trim()) return true
     for (const section of FEEDBACK_SECTIONS) {
       for (const field of section.fields) {
         if (field.optional) continue
@@ -148,7 +149,7 @@ export default function FeedbackForm() {
       const res = await fetch('/api/submit-feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nurseryName, pilotPeriod, answers }),
+        body: JSON.stringify({ nurseryName, respondentName, pilotPeriod, answers }),
       })
       if (!res.ok) throw new Error('Submission failed')
       setSubmitted(true)
@@ -191,6 +192,15 @@ export default function FeedbackForm() {
 
         <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">
           <h2 className="font-semibold text-gray-900 mb-4">About This Submission</h2>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              value={respondentName}
+              onChange={(e) => setRespondentName(e.target.value)}
+            />
+          </div>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Nursery</label>
             <select

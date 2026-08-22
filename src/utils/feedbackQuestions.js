@@ -15,12 +15,6 @@ export const FEEDBACK_SECTIONS = [
         options: ['Administration', 'Reception / Front Desk', 'Security', 'Nursery Staff', 'Management', 'Other'],
         other: true,
       },
-      {
-        key: 'usage_frequency',
-        label: 'How often did you use the system?',
-        type: 'radio',
-        options: ['Multiple times a day', 'Daily', 'A few times a week', 'Occasionally'],
-      },
     ],
   },
   {
@@ -168,17 +162,6 @@ export const FEEDBACK_SECTIONS = [
         label: 'What was the most common feedback from parents?',
         type: 'text',
         optional: true,
-      },
-    ],
-  },
-  {
-    title: 'Timer & Settings',
-    fields: [
-      {
-        key: 'timer_length_feedback',
-        label: 'Did the countdown/timer length feel right for your nursery?',
-        type: 'radio',
-        options: ['Too short', 'About right', 'Too long', 'Not sure'],
       },
     ],
   },

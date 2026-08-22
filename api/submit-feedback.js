@@ -32,14 +32,27 @@ export default async function handler(req, res) {
     return
   }
 
-  const { nurseryName, pilotPeriod, answers } = req.body || {}
+  const { nurseryName, respondentName, pilotPeriod, answers } = req.body || {}
 
-  if (!nurseryName || !NURSERY_OPTIONS.includes(nurseryName) || !answers || typeof answers !== 'object') {
+  if (
+    !nurseryName ||
+    !NURSERY_OPTIONS.includes(nurseryName) ||
+    !respondentName?.trim() ||
+    !answers ||
+    typeof answers !== 'object'
+  ) {
     res.status(400).json({ error: 'Invalid submission' })
     return
   }
 
   const submittedAt = new Date().toISOString()
+  // pilot_period/respondent_name have no dedicated columns — they're
+  // submission metadata, not survey answers, but folding them into the same
+  // flexible jsonb blob (rather than adding a migration for every new
+  // metadata field) keeps them queryable and, importantly, actually stored
+  // (an earlier version of this endpoint accepted pilotPeriod but silently
+  // dropped it before the insert).
+  const fullAnswers = { ...answers, respondent_name: respondentName.trim(), pilot_period: pilotPeriod || null }
 
   const { error: dbError } = await getClient().from('dismissal_feedback_responses').insert({
     nursery_name: nurseryName,
@@ -48,7 +61,7 @@ export default async function handler(req, res) {
     reliability_rating: Number.isFinite(answers.reliability_rating) ? answers.reliability_rating : null,
     adds_real_value: answers.adds_real_value || null,
     continue_using: answers.continue_using || null,
-    answers,
+    answers: fullAnswers,
     submitted_at: submittedAt,
   })
 
@@ -61,13 +74,13 @@ export default async function handler(req, res) {
   // Email is best-effort — the response is already safely stored, so a mail
   // hiccup shouldn't make the submitter think their feedback was lost.
   try {
-    const pdfBuffer = await buildFeedbackPdf({ nurseryName, pilotPeriod, answers, submittedAt })
+    const pdfBuffer = await buildFeedbackPdf({ nurseryName, respondentName, pilotPeriod, answers, submittedAt })
 
     await getTransporter().sendMail({
       from: process.env.GMAIL_USER,
       to: process.env.GMAIL_USER,
       subject: `Pilot Feedback — ${nurseryName}`,
-      text: `New pilot feedback submitted by ${nurseryName}${pilotPeriod ? ` (${pilotPeriod})` : ''}. PDF attached.`,
+      text: `New pilot feedback submitted by ${respondentName} at ${nurseryName}${pilotPeriod ? ` (${pilotPeriod})` : ''}. PDF attached.`,
       attachments: [
         {
           filename: `${nurseryName.replace(/[^a-z0-9]+/gi, '-')}-feedback-${submittedAt.slice(0, 10)}.pdf`,
