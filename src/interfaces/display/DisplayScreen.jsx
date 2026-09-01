@@ -42,12 +42,14 @@ function IdleGallery({ images }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F1117]">
+      {/* No `key` here on purpose — keeping the same <img> element and just
+          swapping `src` lets the browser reuse/decode in place instead of
+          tearing down and rebuilding the element every cycle. On weaker TV
+          browsers, doing a full remount every 8s for hours on end was
+          accumulating enough decode/GC pressure to eventually hang the tab. */}
       <img
-        key={images[index].url}
         src={images[index].url}
         alt=""
-        // object-contain + max-w/h-full means any image size or aspect
-        // ratio fits the full screen without cropping or distortion.
         className="max-w-full max-h-full object-contain"
       />
     </div>

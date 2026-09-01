@@ -3,11 +3,16 @@ import { NavLink, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../hooks/useAuth'
 import SuperAdminNurseries from './SuperAdminNurseries'
+import SuperAdminAnalytics from './SuperAdminAnalytics'
+import NurseryAnalyticsDetail from './NurseryAnalyticsDetail'
 
 // Deliberately not tenant-branded — this is the cross-nursery operator
 // console, not a nursery's own interface, so it gets its own fixed look
 // instead of reading colors from useTenant().
-const NAV_ITEMS = [{ path: 'nurseries', label: 'Nurseries' }]
+const NAV_ITEMS = [
+  { path: 'nurseries', label: 'Nurseries' },
+  { path: 'analytics', label: 'Analytics' },
+]
 
 function Hamburger() {
   return (
@@ -94,6 +99,8 @@ export default function SuperAdminDashboard() {
           <Routes>
             <Route index element={<Navigate to="nurseries" replace />} />
             <Route path="nurseries" element={<SuperAdminNurseries />} />
+            <Route path="analytics" element={<SuperAdminAnalytics />} />
+            <Route path="analytics/:nurseryId" element={<NurseryAnalyticsDetail />} />
           </Routes>
         </main>
       </div>
