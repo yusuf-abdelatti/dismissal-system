@@ -41,17 +41,21 @@ function IdleGallery({ images }) {
   if (images.length === 0) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F1117]">
-      {/* No `key` here on purpose — keeping the same <img> element and just
-          swapping `src` lets the browser reuse/decode in place instead of
-          tearing down and rebuilding the element every cycle. On weaker TV
-          browsers, doing a full remount every 8s for hours on end was
-          accumulating enough decode/GC pressure to eventually hang the tab. */}
-      <img
-        src={images[index].url}
-        alt=""
-        className="max-w-full max-h-full object-contain"
-      />
+    <div className="fixed inset-0 z-50 bg-[#0F1117]">
+      {/* Every image is mounted once and decoded exactly once — cycling
+          just toggles opacity instead of swapping `src` on a shared <img>.
+          Re-decoding the same handful of images every 8s for hours, even
+          without the DOM-remount churn fixed earlier, was still enough to
+          slowly exhaust memory on weaker TV browsers. */}
+      {images.map((img, i) => (
+        <img
+          key={img.url}
+          src={img.url}
+          alt=""
+          className="absolute inset-0 w-full h-full object-contain transition-opacity duration-500"
+          style={{ opacity: i === index ? 1 : 0 }}
+        />
+      ))}
     </div>
   )
 }
