@@ -10,12 +10,14 @@ import AdminStaff from './AdminStaff'
 import AdminSettings from './AdminSettings'
 import AdminRequests from './AdminRequests'
 import AdminHistory from './AdminHistory'
+import AdminPromotion from './AdminPromotion'
 
 const NAV_ITEMS = [
   { path: 'requests', label: 'Active Requests' },
   { path: 'history', label: 'History' },
   { path: 'children', label: 'Children' },
   { path: 'classes', label: 'Classes' },
+  { path: 'promotion', label: 'Class Promotion' },
   { path: 'parents', label: 'Parent Accounts' },
   { path: 'staff', label: 'Staff Accounts' },
   { path: 'settings', label: 'Settings' },
@@ -132,6 +134,7 @@ export default function AdminDashboard() {
             <Route path="history" element={<AdminHistory />} />
             <Route path="children" element={<AdminChildren />} />
             <Route path="classes" element={<AdminClasses />} />
+            <Route path="promotion" element={<AdminPromotion />} />
             <Route path="parents" element={<AdminParents />} />
             <Route path="staff" element={<AdminStaff />} />
             <Route path="settings" element={<AdminSettings />} />
