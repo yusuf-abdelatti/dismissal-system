@@ -381,7 +381,7 @@ Technothera`
         <button
           onClick={loadPreview}
           disabled={!periodStart || !periodEnd || linkedNurseries.length === 0 || previewLoading}
-          className="text-blue-600 hover:underline text-sm disabled:opacity-50 disabled:no-underline mb-4"
+          className="block text-blue-600 hover:underline text-sm disabled:opacity-50 disabled:no-underline mb-4"
         >
           {previewLoading ? 'Loading…' : 'Load preview'}
         </button>
