@@ -59,6 +59,18 @@ export function usePushNotifications(userId) {
 
       const subJson = pushSub.toJSON()
 
+      // A push endpoint belongs to one specific device/browser, not to
+      // whoever happens to be logged in — if this exact device previously
+      // subscribed as a different account (e.g. a classroom tablet handed
+      // to a different teacher), that old account's row would otherwise
+      // stick around forever and keep receiving pushes meant for this
+      // device. Clear it before claiming the endpoint for the current user.
+      await supabase
+        .from('push_subscriptions')
+        .delete()
+        .eq('endpoint', subJson.endpoint)
+        .neq('user_id', userId)
+
       // Save to database
       const { error } = await supabase
         .from('push_subscriptions')

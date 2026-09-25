@@ -212,6 +212,18 @@ export default function StaffApp() {
           ))}
         </select>
 
+        {isSupported && status === 'subscribed' && (
+          <button
+            onClick={subscribe}
+            disabled={status === 'requesting'}
+            className="text-xs px-2 py-1 rounded-lg transition-colors underline disabled:opacity-50"
+            style={{ color: 'rgba(255,255,255,0.6)' }}
+            title="If notifications aren't arriving on this device, tap to reconnect them"
+          >
+            Refresh notifications
+          </button>
+        )}
+
         <button
           onClick={logout}
           className="text-sm px-3 py-2 rounded-lg transition-colors"

@@ -122,6 +122,61 @@ export default function OrganizationDetail() {
     })
   }, [organization, linkedNurseries, snapshots, periodStart, periodEnd, months, setupFeeEgp])
 
+  const latestStatement = statements[0] || null
+
+  // A plain visibility check, not automation: is the most recent statement
+  // unpaid, or has a whole billing cycle passed since it with nothing
+  // generated at all yet. Either way it's just a banner shown when Super
+  // Admin opens this page — no emails, no scheduled jobs.
+  const paymentReminder = useMemo(() => {
+    if (!organization?.billing_start_date) return null
+
+    if (latestStatement) {
+      if (!latestStatement.paid) {
+        return `Statement for ${latestStatement.period_start} → ${latestStatement.period_end} (${fmt(latestStatement.total_due_egp)} EGP) is not marked as paid yet.`
+      }
+      const nextDue = addMonths(latestStatement.period_end, 0)
+      const cycleEnd = addMonths(latestStatement.period_start, organization.billing_cycle_months || 3)
+      if (new Date() > new Date(`${cycleEnd}T00:00:00`)) {
+        return `The next billing period (after ${latestStatement.period_end}) looks ready to generate.`
+      }
+      return null
+    }
+
+    const firstCycleEnd = addMonths(organization.billing_start_date, organization.billing_cycle_months || 3)
+    if (new Date() > new Date(`${firstCycleEnd}T00:00:00`)) {
+      return `No statement has been generated yet, and the first billing period (starting ${organization.billing_start_date}) has already ended.`
+    }
+    return null
+  }, [organization, latestStatement])
+
+  const messageTemplate = useMemo(() => {
+    const source = latestStatement
+      ? { periodStart: latestStatement.period_start, periodEnd: latestStatement.period_end, total: latestStatement.total_due_egp }
+      : breakdown
+      ? { periodStart: breakdown.periodStart, periodEnd: breakdown.periodEnd, total: breakdown.totalDue }
+      : null
+    if (!source || !organization) return ''
+
+    return `Hi Mr. Ahmed,
+
+Please find attached the payment statement for ${organization.name}, covering ${source.periodStart} to ${source.periodEnd}.
+
+Total due: ${fmt(source.total)} EGP
+
+Kindly arrange payment at your convenience. Let us know if you have any questions.
+
+Best regards,
+Technothera`
+  }, [organization, latestStatement, breakdown])
+
+  const [copied, setCopied] = useState(false)
+  const copyTemplate = async () => {
+    await navigator.clipboard.writeText(messageTemplate)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   const generateStatement = async () => {
     setGenerating(true)
     setError(null)
@@ -156,6 +211,15 @@ export default function OrganizationDetail() {
       setError(err.message)
     }
     setGenerating(false)
+  }
+
+  const togglePaid = async (statement) => {
+    const paid = !statement.paid
+    await supabase
+      .from('billing_statements')
+      .update({ paid, paid_at: paid ? new Date().toISOString() : null })
+      .eq('id', statement.id)
+    load()
   }
 
   const redownload = async (statement) => {
@@ -206,6 +270,12 @@ export default function OrganizationDetail() {
       </p>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm">{error}</div>}
+
+      {paymentReminder && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl mb-6 text-sm">
+          <strong>Payment reminder:</strong> {paymentReminder}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="bg-white rounded-xl shadow-sm p-5">
@@ -368,6 +438,20 @@ export default function OrganizationDetail() {
           Saving freezes these figures permanently — re-downloading this statement later will always show the same numbers,
           even if seat data changes afterward.
         </p>
+
+        {messageTemplate && (
+          <div className="mt-5 pt-5 border-t border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Message to send with it</h3>
+              <button onClick={copyTemplate} className="text-blue-600 hover:underline text-xs">
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 whitespace-pre-wrap font-sans">
+              {messageTemplate}
+            </pre>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-5">
@@ -381,6 +465,7 @@ export default function OrganizationDetail() {
                 <th className="text-left py-2 font-semibold text-gray-600">Period</th>
                 <th className="text-left py-2 font-semibold text-gray-600">Total Due</th>
                 <th className="text-left py-2 font-semibold text-gray-600">Generated</th>
+                <th className="text-left py-2 font-semibold text-gray-600">Paid</th>
                 <th className="px-2 py-2" />
               </tr>
             </thead>
@@ -392,6 +477,12 @@ export default function OrganizationDetail() {
                   </td>
                   <td className="py-2 text-gray-600">{fmt(s.total_due_egp)} EGP</td>
                   <td className="py-2 text-gray-500 text-xs">{new Date(s.generated_at).toLocaleDateString()}</td>
+                  <td className="py-2">
+                    <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                      <input type="checkbox" checked={!!s.paid} onChange={() => togglePaid(s)} className="rounded" />
+                      {s.paid ? 'Paid' : 'Unpaid'}
+                    </label>
+                  </td>
                   <td className="py-2 text-right">
                     <button
                       onClick={() => redownload(s)}

@@ -40,6 +40,15 @@ export default function AdminChildren() {
   const [loadError, setLoadError] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [search, setSearch] = useState('')
+  const [childLimit, setChildLimit] = useState(null)
+  const [limitError, setLimitError] = useState(null)
+
+  useEffect(() => {
+    if (!nurseryId) return
+    supabase.from('nurseries').select('child_limit').eq('id', nurseryId).maybeSingle().then(({ data }) => {
+      setChildLimit(data?.child_limit ?? null)
+    })
+  }, [nurseryId])
 
   useEffect(() => {
     load()
@@ -91,6 +100,7 @@ export default function AdminChildren() {
   }
 
   const parentEmailMap = Object.fromEntries(parents.map((p) => [p.id, p.email]))
+  const activeCount = children.filter((c) => c.is_active).length
 
   // Only offer parents not already linked to a child, except the one already
   // linked to whichever child is currently being edited (so it stays selected).
@@ -141,6 +151,10 @@ export default function AdminChildren() {
       setError('Full name is required.')
       return
     }
+    if (!editing && childLimit != null && activeCount >= childLimit) {
+      setError(`This nursery's child limit (${childLimit}) has been reached. Deactivate a child first, or contact Technothera to raise the limit.`)
+      return
+    }
     setSaving(true)
     setError(null)
 
@@ -167,6 +181,11 @@ export default function AdminChildren() {
   }
 
   const toggleActive = async (child) => {
+    if (!child.is_active && childLimit != null && activeCount >= childLimit) {
+      setLimitError(`This nursery's child limit (${childLimit}) has been reached. Deactivate another child first, or contact Technothera to raise the limit.`)
+      return
+    }
+    setLimitError(null)
     await supabase
       .from('children')
       .update({ is_active: !child.is_active })
@@ -187,7 +206,14 @@ export default function AdminChildren() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">Children</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Children</h1>
+          {childLimit != null && (
+            <p className={`text-xs mt-0.5 ${activeCount >= childLimit ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
+              {activeCount} / {childLimit} active seats used
+            </p>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           <input
             type="text"
@@ -208,6 +234,15 @@ export default function AdminChildren() {
       {loadError && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm">
           {loadError}
+        </div>
+      )}
+
+      {limitError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-start justify-between gap-4">
+          <span>{limitError}</span>
+          <button onClick={() => setLimitError(null)} className="text-red-700 hover:underline text-xs whitespace-nowrap">
+            Dismiss
+          </button>
         </div>
       )}
 
