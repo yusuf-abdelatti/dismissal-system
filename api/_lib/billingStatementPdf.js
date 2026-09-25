@@ -102,10 +102,16 @@ export function buildBillingStatementPdf({ organization, breakdown, generatedAt 
     doc.font('Helvetica-Bold').fontSize(13).text(`${fmt(breakdown.totalDue)} EGP`, 380, totalY, { width: 176, align: 'right' })
     doc.x = 56
 
+    // See the same fix in feedbackPdf.js — zeroing the bottom margin stops
+    // PDFKit from auto-inserting a blank trailing page just to fit this
+    // one footer line past the normal margin boundary.
+    const bottomMargin = doc.page.margins.bottom
+    doc.page.margins.bottom = 0
     doc.fillColor(GRAY).font('Helvetica-Oblique').fontSize(8).text('Technothera · Smart Dismissal System', 56, 750, {
       width: 500,
       align: 'center',
     })
+    doc.page.margins.bottom = bottomMargin
 
     doc.end()
   })

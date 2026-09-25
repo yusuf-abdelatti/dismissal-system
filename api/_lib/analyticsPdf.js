@@ -219,10 +219,16 @@ export function buildAnalyticsPdf({ nursery, dateFrom, dateTo, overview, trend, 
       doc.moveDown(0.4)
     }
 
+    // See the same fix in feedbackPdf.js — zeroing the bottom margin stops
+    // PDFKit from auto-inserting a blank trailing page just to fit this
+    // one footer line past the normal margin boundary.
+    const bottomMargin = doc.page.margins.bottom
+    doc.page.margins.bottom = 0
     doc.fillColor(GRAY).font('Helvetica-Oblique').fontSize(8).text('Technothera · Smart Dismissal System', 50, 760, {
       width: 512,
       align: 'center',
     })
+    doc.page.margins.bottom = bottomMargin
 
     doc.end()
   })

@@ -52,10 +52,18 @@ export function buildFeedbackPdf({ nurseryName, respondentName, pilotPeriod, ans
       doc.moveDown(0.4)
     }
 
+    // PDFKit auto-inserts a page break whenever an explicit y sits past
+    // page.height - page.margins.bottom — 760 is past that boundary with a
+    // 50pt margin, so this was silently starting a fresh (near-blank) page
+    // just to print one footer line. Zeroing the bottom margin for this one
+    // call lets it render on the current page instead.
+    const bottomMargin = doc.page.margins.bottom
+    doc.page.margins.bottom = 0
     doc.fillColor(GRAY).font('Helvetica-Oblique').fontSize(8).text('Technothera · Smart Dismissal System', 50, 760, {
       width: 512,
       align: 'center',
     })
+    doc.page.margins.bottom = bottomMargin
 
     doc.end()
   })
