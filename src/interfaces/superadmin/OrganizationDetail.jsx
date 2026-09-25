@@ -123,6 +123,7 @@ export default function OrganizationDetail() {
   }, [organization, linkedNurseries, snapshots, periodStart, periodEnd, months, setupFeeEgp])
 
   const latestStatement = statements[0] || null
+  const alreadyChargedSetupFee = statements.some((s) => Number(s.setup_fee_egp) > 0)
 
   // A plain visibility check, not automation: is the most recent statement
   // unpaid, or has a whole billing cycle passed since it with nothing
@@ -206,6 +207,10 @@ Technothera`
       a.click()
       a.remove()
       URL.revokeObjectURL(url)
+      // The setup fee is a one-time charge at signing, not a recurring
+      // line — clearing it after every generation is what stops it from
+      // silently carrying over and getting billed again next quarter.
+      setSetupFeeEgp('')
       load()
     } catch (err) {
       setError(err.message)
@@ -375,6 +380,12 @@ Technothera`
               onChange={(e) => setSetupFeeEgp(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            <p className="text-xs text-gray-400 mt-1">Leave blank except on the statement this actually applies to — it doesn't repeat automatically.</p>
+            {Number(setupFeeEgp) > 0 && alreadyChargedSetupFee && (
+              <p className="text-xs text-amber-600 mt-1 font-medium">
+                A setup fee was already recorded on a previous statement for this organization. Only include this again if a new branch was just added.
+              </p>
+            )}
           </div>
         </div>
 
