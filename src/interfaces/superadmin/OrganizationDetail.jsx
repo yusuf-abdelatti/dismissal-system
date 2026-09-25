@@ -227,6 +227,14 @@ Technothera`
     load()
   }
 
+  const deleteStatement = async (statement) => {
+    if (!window.confirm(`Delete the statement for ${statement.period_start} → ${statement.period_end}? This cannot be undone.`)) {
+      return
+    }
+    await supabase.from('billing_statements').delete().eq('id', statement.id)
+    load()
+  }
+
   const redownload = async (statement) => {
     setDownloadingId(statement.id)
     try {
@@ -498,9 +506,12 @@ Technothera`
                     <button
                       onClick={() => redownload(s)}
                       disabled={downloadingId === s.id}
-                      className="text-blue-600 hover:underline text-xs disabled:opacity-50"
+                      className="text-blue-600 hover:underline text-xs disabled:opacity-50 mr-3"
                     >
                       {downloadingId === s.id ? 'Downloading…' : 'Download'}
+                    </button>
+                    <button onClick={() => deleteStatement(s)} className="text-red-500 hover:underline text-xs">
+                      Delete
                     </button>
                   </td>
                 </tr>

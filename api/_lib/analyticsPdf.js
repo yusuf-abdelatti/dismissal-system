@@ -43,7 +43,8 @@ export function buildAnalyticsPdf({ nursery, dateFrom, dateTo, overview, trend, 
     doc.fillColor(GRAY).font('Helvetica').fontSize(11)
     doc.text(`Nursery: ${nursery.name}`)
     doc.text(`Reporting period: ${dateFrom} to ${dateTo}`)
-    doc.text(`Generated: ${new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}`)
+    // Pinned to Cairo explicitly — see the same fix in billingStatementPdf.js.
+    doc.text(`Generated: ${new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Africa/Cairo' })}`)
     doc.moveDown(1)
 
     doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text('Overview')

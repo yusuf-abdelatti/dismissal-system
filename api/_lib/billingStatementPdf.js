@@ -26,7 +26,13 @@ export function buildBillingStatementPdf({ organization, breakdown, generatedAt 
     doc.fillColor(GRAY).font('Helvetica').fontSize(10.5)
     doc.text(`Organization: ${organization.name}`)
     doc.text(`Period: ${breakdown.periodStart} to ${breakdown.periodEnd}  (${breakdown.months} month${breakdown.months === 1 ? '' : 's'} billed)`)
-    doc.text(`Generated: ${new Date(generatedAt).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}`)
+    // Pinned to Cairo explicitly — this runs on a Vercel serverless
+    // function, which defaults to UTC, not the nursery's local time. Left
+    // unpinned this silently showed a time 2 hours off (and could even
+    // show the wrong calendar date near midnight Cairo time).
+    doc.text(
+      `Generated: ${new Date(generatedAt).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Africa/Cairo' })}`
+    )
     doc.moveDown(1)
 
     doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text('Per-Branch Detail')
