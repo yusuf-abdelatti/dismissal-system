@@ -405,6 +405,13 @@ Technothera`
           {previewLoading ? 'Loading…' : 'Load preview'}
         </button>
 
+        {breakdown?.startsBeforeBilling && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2.5 rounded-lg mb-4 text-xs">
+            This period starts before the organization's billing start date ({organization.billing_start_date}) —
+            fine for testing/preview, but double-check before generating a real statement with these dates.
+          </div>
+        )}
+
         {breakdown && snapshots.length >= 0 && (
           <div className="border border-gray-200 rounded-lg overflow-hidden mb-4">
             <table className="w-full text-sm">
