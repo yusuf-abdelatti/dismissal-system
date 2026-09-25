@@ -7,8 +7,8 @@
 // and the PDF's inline notes so the two can never say different things
 // about what a number means.
 export const METRIC_EXPLANATIONS = {
-  enrolledChildren: 'Children currently registered at this nursery.',
-  activeChildren: 'Enrolled children who had at least one pickup request in this period — i.e., families actually using the app.',
+  enrolledChildren: 'Children currently registered at this nursery — the same "actively enrolled" count used for billing.',
+  activeChildren: 'Actively enrolled children who had at least one pickup request in this period — i.e., families actually using the app.',
   totalRequests: 'How many times parents requested a pickup during this period.',
   activeDays: "Days with at least one pickup request. Days with none — weekends, holidays, closures — are left out automatically, so they don't drag the numbers down.",
   avgPerActiveDay: "Total requests divided by active days only, so closed days don't make the average look lower than it really is.",
@@ -20,7 +20,7 @@ export const METRIC_EXPLANATIONS = {
   delayExceeded: 'Pickups that took longer than the target time before the child was marked Ready or handed over.',
   delayAverage: 'Among only the delayed pickups, how far past the target they ran, on average.',
   arrivalHandoff: 'Time from a parent tapping "I Have Arrived" to the child actually being handed over. This relies on parents using that button, so treat it as an estimate, not an exact figure.',
-  classChildren: 'Children enrolled in this class.',
+  classChildren: 'Children actively enrolled in this class.',
   classActive: "This class's children who had at least one pickup request in this period.",
   classRequests: 'Total pickup requests made for children in this class.',
   classAvgPrep: 'Average time to get a child from this class ready after a pickup was requested.',
@@ -348,7 +348,7 @@ export function computeInsights({ overview, prepTime, peak, classBreakdown, dela
   }
 
   insights.push(
-    `${overview.activeChildren} of ${overview.totalChildren} enrolled children (${pct(overview.adoptionRate)}) used the Smart Dismissal System during this period.`
+    `${overview.activeChildren} of ${overview.totalChildren} actively enrolled children (${pct(overview.adoptionRate)}) used the Smart Dismissal System during this period.`
   )
 
   if (peak) {

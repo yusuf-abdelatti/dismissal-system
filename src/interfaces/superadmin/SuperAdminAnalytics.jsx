@@ -69,7 +69,7 @@ export default function SuperAdminAnalytics() {
           <thead>
             <tr className="border-b bg-gray-50">
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Nursery</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">Active Children</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600">Used the System</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Pickup Requests</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Adoption</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-600">Avg / Active Day</th>

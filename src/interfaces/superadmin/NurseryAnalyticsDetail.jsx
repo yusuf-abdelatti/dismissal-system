@@ -221,9 +221,9 @@ export default function NurseryAnalyticsDetail() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <Card label="Enrolled Children" value={overview.totalChildren} info={METRIC_EXPLANATIONS.enrolledChildren} />
+        <Card label="Actively Enrolled Children" value={overview.totalChildren} info={METRIC_EXPLANATIONS.enrolledChildren} />
         <Card
-          label="Active Children"
+          label="Used the System"
           value={overview.activeChildren}
           sub={fmtPct(overview.adoptionRate) + ' adoption'}
           info={METRIC_EXPLANATIONS.activeChildren}
@@ -357,11 +357,11 @@ export default function NurseryAnalyticsDetail() {
               <tr className="border-b">
                 <th className="text-left py-2 font-semibold text-gray-600">Class</th>
                 <th className="text-left py-2 font-semibold text-gray-600 whitespace-nowrap">
-                  Children
+                  Enrolled
                   <InfoTip text={METRIC_EXPLANATIONS.classChildren} />
                 </th>
                 <th className="text-left py-2 font-semibold text-gray-600 whitespace-nowrap">
-                  Active
+                  Used
                   <InfoTip text={METRIC_EXPLANATIONS.classActive} />
                 </th>
                 <th className="text-left py-2 font-semibold text-gray-600 whitespace-nowrap">

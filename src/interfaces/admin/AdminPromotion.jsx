@@ -375,7 +375,7 @@ export default function AdminPromotion() {
                 <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                   <h2 className="text-sm font-semibold text-gray-700">
                     {sourceClass?.name} → {targetClass?.name}{' '}
-                    <span className="text-gray-400 font-normal">({pairChildren.length} active children)</span>
+                    <span className="text-gray-400 font-normal">({pairChildren.length} actively enrolled children)</span>
                   </h2>
                   <div className="text-xs text-gray-500">
                     {c[PROMOTE]} promote · {c[KEEP]} keep · {c[ARCHIVE]} archive
@@ -384,7 +384,7 @@ export default function AdminPromotion() {
 
                 {pairChildren.length === 0 ? (
                   <div className="bg-white rounded-xl shadow-sm px-4 py-6 text-center text-gray-400 text-sm">
-                    No active children in {sourceClass?.name}.
+                    No actively enrolled children in {sourceClass?.name}.
                   </div>
                 ) : (
                   <div className="bg-white rounded-xl shadow-sm overflow-hidden">

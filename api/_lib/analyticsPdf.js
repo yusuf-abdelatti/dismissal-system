@@ -48,10 +48,10 @@ export function buildAnalyticsPdf({ nursery, dateFrom, dateTo, overview, trend, 
 
     doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text('Overview')
     doc.moveDown(0.3)
-    statLine(doc, 'Enrolled children', String(overview.totalChildren), METRIC_EXPLANATIONS.enrolledChildren)
+    statLine(doc, 'Actively enrolled children', String(overview.totalChildren), METRIC_EXPLANATIONS.enrolledChildren)
     statLine(
       doc,
-      'Active children (used the system)',
+      'Used the system',
       `${overview.activeChildren} (${fmtPct(overview.adoptionRate)})`,
       METRIC_EXPLANATIONS.activeChildren
     )
@@ -164,7 +164,7 @@ export function buildAnalyticsPdf({ nursery, dateFrom, dateTo, overview, trend, 
         .fontSize(8)
         .fillColor(NOTE_GRAY)
         .text(
-          'Children = enrolled in this class · Active = had a pickup this period · Avg Prep = average time to get a child ready · Delayed = pickups that ran past the target time.',
+          'Enrolled = actively enrolled in this class · Used = had a pickup this period · Avg Prep = average time to get a child ready · Delayed = pickups that ran past the target time.',
           { width: 500 }
         )
       doc.moveDown(0.5)
@@ -173,7 +173,7 @@ export function buildAnalyticsPdf({ nursery, dateFrom, dateTo, overview, trend, 
       const widths = [130, 70, 70, 70, 80, 80]
       const headerY = doc.y
       doc.font('Helvetica-Bold').fontSize(9).fillColor(DARK)
-      ;['Class', 'Children', 'Active', 'Requests', 'Avg Prep', 'Delayed'].forEach((h, i) =>
+      ;['Class', 'Enrolled', 'Used', 'Requests', 'Avg Prep', 'Delayed'].forEach((h, i) =>
         doc.text(h, xs[i], headerY, { width: widths[i] })
       )
       doc.moveDown(1)
