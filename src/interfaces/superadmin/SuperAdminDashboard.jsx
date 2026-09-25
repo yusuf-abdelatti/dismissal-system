@@ -5,6 +5,8 @@ import { useAuth } from '../../hooks/useAuth'
 import SuperAdminNurseries from './SuperAdminNurseries'
 import SuperAdminAnalytics from './SuperAdminAnalytics'
 import NurseryAnalyticsDetail from './NurseryAnalyticsDetail'
+import SuperAdminOrganizations from './SuperAdminOrganizations'
+import OrganizationDetail from './OrganizationDetail'
 
 // Deliberately not tenant-branded — this is the cross-nursery operator
 // console, not a nursery's own interface, so it gets its own fixed look
@@ -12,6 +14,7 @@ import NurseryAnalyticsDetail from './NurseryAnalyticsDetail'
 const NAV_ITEMS = [
   { path: 'nurseries', label: 'Nurseries' },
   { path: 'analytics', label: 'Analytics' },
+  { path: 'organizations', label: 'Organizations' },
 ]
 
 function Hamburger() {
@@ -101,6 +104,8 @@ export default function SuperAdminDashboard() {
             <Route path="nurseries" element={<SuperAdminNurseries />} />
             <Route path="analytics" element={<SuperAdminAnalytics />} />
             <Route path="analytics/:nurseryId" element={<NurseryAnalyticsDetail />} />
+            <Route path="organizations" element={<SuperAdminOrganizations />} />
+            <Route path="organizations/:organizationId" element={<OrganizationDetail />} />
           </Routes>
         </main>
       </div>
