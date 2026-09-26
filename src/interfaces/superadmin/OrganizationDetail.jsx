@@ -159,7 +159,9 @@ export default function OrganizationDetail() {
     return null
   }, [organization, latestStatement, drafts])
 
-  const messageTemplate = useMemo(() => {
+  // Generic on purpose — not addressed to any one person's name, since this
+  // is reused across whichever nursery/organization is open, not just one.
+  const autoMessageTemplate = useMemo(() => {
     const source = latestStatement
       ? { periodStart: latestStatement.period_start, periodEnd: latestStatement.period_end, total: latestStatement.total_due_egp }
       : breakdown
@@ -167,23 +169,64 @@ export default function OrganizationDetail() {
       : null
     if (!source || !organization) return ''
 
-    return `Hi Mr. Ahmed,
+    return `Dear ${organization.name} Team,
 
-Please find attached the payment statement for ${organization.name}, covering ${source.periodStart} to ${source.periodEnd}.
+Please find attached the payment statement covering ${source.periodStart} to ${source.periodEnd}.
 
 Total due: ${fmt(source.total)} EGP
 
 Kindly arrange payment at your convenience. Let us know if you have any questions.
 
 Best regards,
-Technothera`
+Technothera Finance Department`
   }, [organization, latestStatement, breakdown])
+
+  const [messageText, setMessageText] = useState('')
+  const [sendToEmail, setSendToEmail] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sentOk, setSentOk] = useState(false)
+
+  // Only resets the editable draft when a genuinely new statement becomes
+  // "latest" (or the preview total changes before anything is saved yet) —
+  // not on every keystroke, so edits aren't clobbered mid-typing.
+  useEffect(() => {
+    setMessageText(autoMessageTemplate)
+  }, [autoMessageTemplate])
+
+  useEffect(() => {
+    const firstExtra = (organization?.additional_recipient_emails || '').split(',')[0]?.trim()
+    setSendToEmail(firstExtra || '')
+  }, [organization?.id])
 
   const [copied, setCopied] = useState(false)
   const copyTemplate = async () => {
-    await navigator.clipboard.writeText(messageTemplate)
+    await navigator.clipboard.writeText(messageText)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const sendStatementEmail = async () => {
+    if (!latestStatement || !sendToEmail) return
+    setSending(true)
+    setError(null)
+    setSentOk(false)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/send-statement-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ statementId: latestStatement.id, to: sendToEmail, message: messageText }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Could not send the email')
+      }
+      setSentOk(true)
+      setTimeout(() => setSentOk(false), 4000)
+    } catch (err) {
+      setError(err.message)
+    }
+    setSending(false)
   }
 
   const editDraft = (draft) => {
@@ -529,7 +572,7 @@ Technothera`
           even if seat data changes afterward.
         </p>
 
-        {messageTemplate && (
+        {messageText && (
           <div className="mt-5 pt-5 border-t border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Message to send with it</h3>
@@ -537,9 +580,38 @@ Technothera`
                 {copied ? 'Copied!' : 'Copy'}
               </button>
             </div>
-            <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 whitespace-pre-wrap font-sans">
-              {messageTemplate}
-            </pre>
+            <textarea
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              rows={8}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans"
+            />
+
+            {latestStatement && (
+              <div className="flex items-end gap-2 mt-3 flex-wrap">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Send to</label>
+                  <input
+                    type="email"
+                    placeholder="owner@nursery.com"
+                    value={sendToEmail}
+                    onChange={(e) => setSendToEmail(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <button
+                  onClick={sendStatementEmail}
+                  disabled={!sendToEmail || sending}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+                >
+                  {sending ? 'Sending…' : sentOk ? 'Sent!' : 'Send Email'}
+                </button>
+              </div>
+            )}
+            <p className="text-xs text-gray-400 mt-2">
+              Sends the most recent confirmed statement ({latestStatement?.period_start} → {latestStatement?.period_end})
+              as a PDF attachment, with the message above as the email body.
+            </p>
           </div>
         )}
       </div>
