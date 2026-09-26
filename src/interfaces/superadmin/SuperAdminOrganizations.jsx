@@ -25,6 +25,7 @@ const EMPTY_FORM = {
   billing_cycle_months: 3,
   billing_start_date: '',
   rate_locked_until: '',
+  additional_recipient_emails: '',
 }
 
 function toForm(org) {
@@ -35,6 +36,7 @@ function toForm(org) {
     billing_cycle_months: org.billing_cycle_months ?? 3,
     billing_start_date: org.billing_start_date || '',
     rate_locked_until: org.rate_locked_until || '',
+    additional_recipient_emails: org.additional_recipient_emails || '',
   }
 }
 
@@ -46,6 +48,7 @@ function toPayload(form) {
     billing_cycle_months: Number(form.billing_cycle_months) || 3,
     billing_start_date: form.billing_start_date || null,
     rate_locked_until: form.rate_locked_until || null,
+    additional_recipient_emails: form.additional_recipient_emails.trim() || null,
   }
 }
 
@@ -276,6 +279,23 @@ export default function SuperAdminOrganizations() {
               value={form.rate_locked_until}
               onChange={(e) => setForm((f) => ({ ...f, rate_locked_until: e.target.value }))}
             />
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Additional reminder recipients <span className="text-gray-400 font-normal">(optional, comma-separated)</span>
+            </label>
+            <input
+              type="text"
+              placeholder="owner@nursery.com"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={form.additional_recipient_emails}
+              onChange={(e) => setForm((f) => ({ ...f, additional_recipient_emails: e.target.value }))}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Sent alongside the internal Technothera addresses on every payment reminder for this organization — e.g. the
+              nursery owner's own email, once you're ready to include them.
+            </p>
           </div>
 
           <div className="flex gap-3 justify-end">

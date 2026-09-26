@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     return
   }
 
-  const { statementId, organizationId, periodStart, periodEnd, months, setupFeeEgp } = req.body || {}
+  const { statementId, organizationId, periodStart, periodEnd, months, setupFeeEgp, confirmDraftId } = req.body || {}
 
   // Re-rendering a previously generated statement: read the frozen
   // breakdown back out rather than recomputing, so a re-download can never
@@ -96,18 +96,37 @@ export default async function handler(req, res) {
 
   const generatedAt = new Date().toISOString()
 
-  const { error: insertError } = await callerClient.from('billing_statements').insert({
-    organization_id: organizationId,
-    period_start: periodStart,
-    period_end: periodEnd,
-    rate_per_seat_egp: organization.rate_per_seat_egp,
-    setup_fee_egp: breakdown.setupFeeEgp || null,
-    breakdown,
-    total_due_egp: breakdown.totalDue,
-    generated_at: generatedAt,
-  })
+  // Confirming (and possibly editing) an auto-created draft updates that
+  // same row rather than inserting a new one — it stops being a draft at
+  // this point, and generated_at is re-stamped to when it was actually
+  // reviewed and confirmed, not when the draft was silently auto-created.
+  const writeResult = confirmDraftId
+    ? await callerClient
+        .from('billing_statements')
+        .update({
+          period_start: periodStart,
+          period_end: periodEnd,
+          rate_per_seat_egp: organization.rate_per_seat_egp,
+          setup_fee_egp: breakdown.setupFeeEgp || null,
+          breakdown,
+          total_due_egp: breakdown.totalDue,
+          generated_at: generatedAt,
+          is_draft: false,
+        })
+        .eq('id', confirmDraftId)
+    : await callerClient.from('billing_statements').insert({
+        organization_id: organizationId,
+        period_start: periodStart,
+        period_end: periodEnd,
+        rate_per_seat_egp: organization.rate_per_seat_egp,
+        setup_fee_egp: breakdown.setupFeeEgp || null,
+        breakdown,
+        total_due_egp: breakdown.totalDue,
+        generated_at: generatedAt,
+        is_draft: false,
+      })
 
-  if (insertError) {
+  if (writeResult.error) {
     res.status(500).json({ error: 'Could not save the statement record' })
     return
   }

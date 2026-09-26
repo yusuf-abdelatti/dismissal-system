@@ -11,13 +11,26 @@ function fmt(n) {
   return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-async function sendReminderEmail({ organizationName, statement }) {
+function parseExtraRecipients(raw) {
+  if (!raw) return []
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
+async function sendReminderEmail({ organizationName, extraRecipients, statement }) {
   const subject = `Payment reminder — ${organizationName} (${statement.period_start} → ${statement.period_end})`
   const text = `Reminder: the payment statement for ${organizationName}, covering ${statement.period_start} to ${statement.period_end}, is not yet marked as paid.
 
 Total due: ${fmt(statement.total_due_egp)} EGP
 
 This is an automated reminder — it will keep repeating every few days until the statement is marked paid in the Super Admin panel.`
+
+  // De-duplicated so an address typed into "additional recipients" that
+  // happens to match one of the fixed internal ones doesn't get the email
+  // twice.
+  const recipients = [...new Set([...REMINDER_RECIPIENTS, ...extraRecipients])]
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -27,7 +40,7 @@ This is an automated reminder — it will keep repeating every few days until th
     },
     body: JSON.stringify({
       from: FROM_ADDRESS,
-      to: REMINDER_RECIPIENTS,
+      to: recipients,
       subject,
       text,
     }),
@@ -60,8 +73,11 @@ export default async function handler(req, res) {
 
   const { data: statements, error } = await supabase
     .from('billing_statements')
-    .select('id, organization_id, period_start, period_end, total_due_egp, last_reminder_sent_at, organizations(name)')
+    .select(
+      'id, organization_id, period_start, period_end, total_due_egp, last_reminder_sent_at, organizations(name, additional_recipient_emails)'
+    )
     .eq('paid', false)
+    .eq('is_draft', false)
     .or(`last_reminder_sent_at.is.null,last_reminder_sent_at.lte.${cutoff}`)
 
   if (error) {
@@ -76,6 +92,7 @@ export default async function handler(req, res) {
     try {
       await sendReminderEmail({
         organizationName: statement.organizations?.name || 'Organization',
+        extraRecipients: parseExtraRecipients(statement.organizations?.additional_recipient_emails),
         statement,
       })
       await supabase

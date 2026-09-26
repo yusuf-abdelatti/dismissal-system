@@ -36,6 +36,7 @@ export default function OrganizationDetail() {
   const [generating, setGenerating] = useState(false)
   const [downloadingId, setDownloadingId] = useState(null)
   const [error, setError] = useState(null)
+  const [editingDraftId, setEditingDraftId] = useState(null)
 
   useEffect(() => {
     load()
@@ -122,24 +123,31 @@ export default function OrganizationDetail() {
     })
   }, [organization, linkedNurseries, snapshots, periodStart, periodEnd, months, setupFeeEgp])
 
-  const latestStatement = statements[0] || null
-  const alreadyChargedSetupFee = statements.some((s) => Number(s.setup_fee_egp) > 0)
+  const drafts = statements.filter((s) => s.is_draft)
+  const confirmedStatements = statements.filter((s) => !s.is_draft)
+  const latestStatement = confirmedStatements[0] || null
+  const alreadyChargedSetupFee = confirmedStatements.some((s) => Number(s.setup_fee_egp) > 0)
 
-  // A plain visibility check, not automation: is the most recent statement
-  // unpaid, or has a whole billing cycle passed since it with nothing
-  // generated at all yet. Either way it's just a banner shown when Super
-  // Admin opens this page — no emails, no scheduled jobs.
+  // A plain visibility check, not automation: is there a draft waiting for
+  // review, is the most recent confirmed statement unpaid, or has a whole
+  // billing cycle passed with nothing generated (and no draft yet either —
+  // the auto-draft job should normally beat this to it, but it's a
+  // fallback in case that job hasn't run). Either way it's just a banner
+  // shown when Super Admin opens this page — no emails triggered from here.
   const paymentReminder = useMemo(() => {
     if (!organization?.billing_start_date) return null
+
+    if (drafts.length > 0) {
+      return `${drafts.length} draft statement${drafts.length === 1 ? '' : 's'} waiting for your review below.`
+    }
 
     if (latestStatement) {
       if (!latestStatement.paid) {
         return `Statement for ${latestStatement.period_start} → ${latestStatement.period_end} (${fmt(latestStatement.total_due_egp)} EGP) is not marked as paid yet.`
       }
-      const nextDue = addMonths(latestStatement.period_end, 0)
       const cycleEnd = addMonths(latestStatement.period_start, organization.billing_cycle_months || 3)
       if (new Date() > new Date(`${cycleEnd}T00:00:00`)) {
-        return `The next billing period (after ${latestStatement.period_end}) looks ready to generate.`
+        return `The next billing period (after ${latestStatement.period_end}) looks ready — a draft should appear automatically, or generate one manually below.`
       }
       return null
     }
@@ -149,7 +157,7 @@ export default function OrganizationDetail() {
       return `No statement has been generated yet, and the first billing period (starting ${organization.billing_start_date}) has already ended.`
     }
     return null
-  }, [organization, latestStatement])
+  }, [organization, latestStatement, drafts])
 
   const messageTemplate = useMemo(() => {
     const source = latestStatement
@@ -178,6 +186,21 @@ Technothera`
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const editDraft = (draft) => {
+    setEditingDraftId(draft.id)
+    setPeriodStart(draft.period_start)
+    setPeriodEnd(draft.period_end)
+    setMonths(draft.breakdown?.months || organization.billing_cycle_months || 3)
+    setSetupFeeEgp(draft.setup_fee_egp ? String(draft.setup_fee_egp) : '')
+    setError(null)
+    loadPreview()
+  }
+
+  const cancelEditDraft = () => {
+    setEditingDraftId(null)
+    setSetupFeeEgp('')
+  }
+
   const generateStatement = async () => {
     setGenerating(true)
     setError(null)
@@ -192,6 +215,7 @@ Technothera`
           periodEnd,
           months: Number(months),
           setupFeeEgp: setupFeeEgp ? Number(setupFeeEgp) : 0,
+          confirmDraftId: editingDraftId || undefined,
         }),
       })
       if (!res.ok) {
@@ -211,6 +235,7 @@ Technothera`
       // line — clearing it after every generation is what stops it from
       // silently carrying over and getting billed again next quarter.
       setSetupFeeEgp('')
+      setEditingDraftId(null)
       load()
     } catch (err) {
       setError(err.message)
@@ -346,8 +371,47 @@ Technothera`
         </div>
       </div>
 
+      {drafts.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm p-5 mb-6 border-2 border-amber-200">
+          <h2 className="text-sm font-semibold text-gray-700 mb-1">Needs Review</h2>
+          <p className="text-xs text-gray-400 mb-4">
+            Created automatically when a billing period ended — nothing here is final until you review, adjust if
+            needed, and confirm it below.
+          </p>
+          <div className="divide-y divide-gray-100">
+            {drafts.map((d) => (
+              <div key={d.id} className="flex items-center justify-between gap-3 py-3 flex-wrap">
+                <div className="text-sm">
+                  <span className="text-gray-800">
+                    {d.period_start} → {d.period_end}
+                  </span>
+                  <span className="text-gray-400 ml-2">~{fmt(d.total_due_egp)} EGP estimated</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => editDraft(d)} className="text-blue-600 hover:underline text-xs">
+                    Review & Edit
+                  </button>
+                  <button onClick={() => deleteStatement(d)} className="text-red-500 hover:underline text-xs">
+                    Discard
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm p-5 mb-6">
-        <h2 className="text-sm font-semibold text-gray-700 mb-4">Generate Payment Statement</h2>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h2 className="text-sm font-semibold text-gray-700">
+            {editingDraftId ? 'Reviewing Draft Statement' : 'Generate Payment Statement'}
+          </h2>
+          {editingDraftId && (
+            <button onClick={cancelEditDraft} className="text-xs text-gray-400 hover:text-gray-600 hover:underline">
+              Cancel — start a new one instead
+            </button>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <div>
@@ -458,7 +522,7 @@ Technothera`
           disabled={!breakdown || generating}
           className="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
-          {generating ? 'Generating…' : 'Generate PDF & Save Statement'}
+          {generating ? 'Saving…' : editingDraftId ? 'Confirm & Save Statement' : 'Generate PDF & Save Statement'}
         </button>
         <p className="text-xs text-gray-400 mt-2">
           Saving freezes these figures permanently — re-downloading this statement later will always show the same numbers,
@@ -482,7 +546,7 @@ Technothera`
 
       <div className="bg-white rounded-xl shadow-sm p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Past Statements</h2>
-        {statements.length === 0 ? (
+        {confirmedStatements.length === 0 ? (
           <p className="text-sm text-gray-400">No statements generated yet.</p>
         ) : (
           <table className="w-full text-sm">
@@ -496,7 +560,7 @@ Technothera`
               </tr>
             </thead>
             <tbody>
-              {statements.map((s) => (
+              {confirmedStatements.map((s) => (
                 <tr key={s.id} className="border-b last:border-0">
                   <td className="py-2 text-gray-800">
                     {s.period_start} → {s.period_end}
