@@ -2,12 +2,10 @@ import { createClient } from '@supabase/supabase-js'
 
 const REMINDER_INTERVAL_DAYS = 3
 const REMINDER_RECIPIENTS = ['technothera@gmail.com', 'yusuf.a.abdelatti@gmail.com']
-// Resend's shared test sender — works immediately with no domain setup.
-// Note: in sandbox mode Resend may only actually deliver to the email
-// address your Resend account itself is registered under, so one of the
-// two recipients above could silently not receive it until a real sending
-// domain is verified.
-const FROM_ADDRESS = 'Technothera <onboarding@resend.dev>'
+// technothera.com is verified with Resend, so sending is no longer
+// restricted to the Resend account's own email — this now reaches any
+// recipient, including both addresses above.
+const FROM_ADDRESS = 'Technothera <billing@technothera.com>'
 
 function fmt(n) {
   return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
