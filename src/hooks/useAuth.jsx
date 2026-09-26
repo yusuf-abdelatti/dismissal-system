@@ -78,6 +78,22 @@ export function AuthProvider({ children }) {
             setNurseryId(null)
             clearCache()
           }
+        } catch (err) {
+          // resolveRoleAndNursery now throws on a real query failure
+          // instead of silently defaulting — without this catch, that
+          // exception would propagate out of this callback uncaught,
+          // skipping the setRole/setNurseryId calls below it and leaving
+          // `user` set but `role` forever null. ProtectedRoute treats
+          // exactly that combination as "still resolving" and shows a
+          // spinner indefinitely — a different-looking but equally silent
+          // failure. Signing out and clearing state here at least returns
+          // the user to the login screen instead of an infinite spinner.
+          console.error('Auth resolution failed:', err)
+          await supabase.auth.signOut().catch(() => {})
+          setUser(null)
+          setRole(null)
+          setNurseryId(null)
+          clearCache()
         } finally {
           if (mounted) setLoading(false)
         }

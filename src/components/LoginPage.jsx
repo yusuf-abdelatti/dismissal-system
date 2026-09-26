@@ -25,37 +25,44 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (authError) {
-      setError('Invalid email or password.')
+      if (authError) {
+        setError('Invalid email or password.')
+        return
+      }
+
+      const info = await resolveRoleAndNursery(data.user.id)
+
+      if (tenant?.id && info.nurseryId && info.nurseryId !== tenant.id) {
+        // Deliberately not signing out here — useAuth's own
+        // onAuthStateChange listener detects the exact same mismatch
+        // independently (it has to, to cover someone landing on the wrong
+        // subdomain with an already-cached session, not just a fresh login
+        // here) and signs out on its own timeline. Both calling signOut()
+        // was a race: whichever won first could invalidate the session
+        // before this component's own check finished. This component now
+        // only ever shows the message; useAuth alone owns actually ending
+        // the session.
+        setError(`This account isn't part of ${tenant.name}.`)
+        return
+      }
+
+      navigate(ROLE_REDIRECTS[info.role] ?? '/parent', { replace: true })
+    } catch (err) {
+      // Anything unexpected here — a failed lookup, a network blip,
+      // whatever — used to leave the user staring at an unchanged login
+      // form with no explanation at all. Nothing should ever be able to
+      // fail this silently again.
+      console.error('Login failed:', err)
+      setError(err.message || 'Something went wrong while signing in. Please try again.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    const info = await resolveRoleAndNursery(data.user.id)
-
-    if (tenant?.id && info.nurseryId && info.nurseryId !== tenant.id) {
-      // Deliberately not signing out here — useAuth's own onAuthStateChange
-      // listener detects the exact same mismatch independently (it has to,
-      // to cover someone landing on the wrong subdomain with an already-
-      // cached session, not just a fresh login here) and signs out on its
-      // own timeline. Both calling signOut() was a race: whichever won
-      // first could invalidate the session before this component's own
-      // check finished, so this error was sometimes never shown at all —
-      // it silently fell through and tried to navigate against an already
-      // signed-out session instead. This component now only ever shows the
-      // message; useAuth alone owns actually ending the session.
-      setError(`This account isn't part of ${tenant.name}.`)
-      setLoading(false)
-      return
-    }
-
-    navigate(ROLE_REDIRECTS[info.role] ?? '/parent', { replace: true })
-    setLoading(false)
   }
 
   return (
