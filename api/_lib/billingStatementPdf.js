@@ -1,118 +1,97 @@
 import PDFDocument from 'pdfkit'
-
-const TEAL = '#2E5A63'
-const ACCENT = '#5F94AC'
-const GRAY = '#6B7280'
-const NOTE_GRAY = '#9CA3AF'
-const DARK = '#1F2937'
+import { NAVY, TEAL_LIGHT, GRAY, GRAY_LIGHT, DARK, drawBanner, infoColumns, sectionHeading, glanceBoxes, table, footer, ensureSpace } from './pdfTheme.js'
 
 function fmt(n) {
   return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function ensureSpace(doc, needed) {
-  if (doc.y + needed > 700) doc.addPage()
-}
-
 export function buildBillingStatementPdf({ organization, breakdown, generatedAt }) {
   return new Promise((resolve) => {
-    const doc = new PDFDocument({ size: 'LETTER', margin: 56 })
+    const doc = new PDFDocument({ size: 'LETTER', margin: 50 })
     const chunks = []
     doc.on('data', (c) => chunks.push(c))
     doc.on('end', () => resolve(Buffer.concat(chunks)))
 
-    doc.fillColor(TEAL).font('Helvetica-Bold').fontSize(20).text('Technothera — Payment Statement')
-    doc.moveDown(0.3)
-    doc.fillColor(GRAY).font('Helvetica').fontSize(10.5)
-    doc.text(`Organization: ${organization.name}`)
-    doc.text(`Period: ${breakdown.periodStart} to ${breakdown.periodEnd}  (${breakdown.months} month${breakdown.months === 1 ? '' : 's'} billed)`)
     // Pinned to Cairo explicitly — this runs on a Vercel serverless
     // function, which defaults to UTC, not the nursery's local time. Left
     // unpinned this silently showed a time 2 hours off (and could even
     // show the wrong calendar date near midnight Cairo time).
-    doc.text(
-      `Generated: ${new Date(generatedAt).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Africa/Cairo' })}`
-    )
-    doc.moveDown(1)
+    const generatedLabel = new Date(generatedAt).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Africa/Cairo' })
 
-    doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text('Per-Branch Detail')
-    doc.moveDown(0.4)
+    drawBanner(doc, {
+      leftTitle: 'TECHNOTHERA',
+      leftSubtitle: 'Smart Dismissal System',
+      rightTitle: 'PAYMENT STATEMENT',
+      rightSubtitle: `Generated: ${generatedLabel}`,
+    })
 
-    const xs = [56, 260, 350, 440]
-    const widths = [190, 80, 80, 76]
-    const headerY = doc.y
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(DARK)
-    ;['Branch', 'Avg Seats', 'Rate', 'Subtotal'].forEach((h, i) => doc.text(h, xs[i], headerY, { width: widths[i] }))
-    doc.moveDown(1)
-    doc.moveTo(56, doc.y).lineTo(556, doc.y).strokeColor('#E5E7EB').stroke()
-    doc.moveDown(0.4)
+    infoColumns(doc, [
+      { label: 'Organization', lines: [organization.name] },
+      {
+        label: 'Period Covered',
+        lines: [`${breakdown.periodStart} to ${breakdown.periodEnd}`, `${breakdown.months} month${breakdown.months === 1 ? '' : 's'} billed`],
+      },
+    ])
 
-    doc.font('Helvetica').fontSize(9).fillColor(GRAY)
-    for (const b of breakdown.branches) {
-      ensureSpace(doc, 20)
-      const rowY = doc.y
-      doc.text(b.name, xs[0], rowY, { width: widths[0] })
-      doc.text(b.avgSeats.toFixed(1), xs[1], rowY, { width: widths[1] })
-      doc.text(`${breakdown.rate} EGP`, xs[2], rowY, { width: widths[2] })
-      doc.text(`${fmt(b.subtotal)} EGP`, xs[3], rowY, { width: widths[3] })
-      doc.moveDown(0.9)
-    }
-    doc.x = 56
-    doc.moveDown(0.6)
+    glanceBoxes(doc, [
+      { label: 'Total Due', value: `${fmt(breakdown.totalDue)} EGP` },
+      {
+        label: 'Combined Avg Seats',
+        value: breakdown.combinedAvgSeats.toFixed(1),
+        caption: breakdown.seatLimit != null ? `of ${breakdown.seatLimit} shared seats` : undefined,
+      },
+    ])
+
+    sectionHeading(doc, 'Per-Branch Detail')
+    table(doc, {
+      columns: [
+        { header: 'Branch', width: 220 },
+        { header: 'Avg Seats', width: 100, align: 'right' },
+        { header: 'Rate', width: 90, align: 'right' },
+        { header: 'Subtotal', width: 102, align: 'right' },
+      ],
+      rows: breakdown.branches.map((b) => [b.name, b.avgSeats.toFixed(1), `${breakdown.rate} EGP`, `${fmt(b.subtotal)} EGP`]),
+    })
 
     ensureSpace(doc, 90)
-    doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text('How This Was Calculated')
-    doc.moveDown(0.3)
+    sectionHeading(doc, 'How This Was Calculated')
     doc.fillColor(GRAY).font('Helvetica').fontSize(10).text(
       'Each branch’s daily active-child count is recorded automatically every day. The figure above for each branch is the average of those daily counts over this period, multiplied by the rate and the number of months billed.',
       { width: 500 }
     )
-    doc.moveDown(0.3)
-    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(10.5).text(
-      `Combined average across all branches: ${breakdown.combinedAvgSeats.toFixed(1)}${breakdown.seatLimit != null ? ` of ${breakdown.seatLimit} shared seats` : ''}`
-    )
     doc.moveDown(1)
 
-    ensureSpace(doc, 140)
-    doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text('Amount Due')
-    doc.moveDown(0.4)
-    doc.moveTo(56, doc.y).lineTo(556, doc.y).strokeColor('#E5E7EB').stroke()
-    doc.moveDown(0.5)
+    ensureSpace(doc, 150)
+    sectionHeading(doc, 'Amount Due')
 
-    const line = (label, value, note) => {
+    const dueRows = [{ label: 'Recurring subscription (this period)', value: breakdown.recurringTotal }]
+    if (breakdown.setupFeeEgp > 0) {
+      dueRows.push({ label: 'One-time setup fee', value: breakdown.setupFeeEgp, note: 'Included on this statement only' })
+    }
+
+    for (const row of dueRows) {
+      ensureSpace(doc, 26)
       const y = doc.y
-      doc.fillColor(DARK).font('Helvetica').fontSize(10.5).text(label, 56, y, { width: 350 })
-      doc.font('Helvetica-Bold').text(`${fmt(value)} EGP`, 380, y, { width: 176, align: 'right' })
-      if (note) {
-        doc.fillColor(NOTE_GRAY).font('Helvetica-Oblique').fontSize(8).text(note, 56, doc.y, { width: 500 })
+      doc.fillColor(DARK).font('Helvetica').fontSize(10.5).text(row.label, 50, y, { width: 350 })
+      doc.font('Helvetica-Bold').text(`${fmt(row.value)} EGP`, 380, y, { width: 170, align: 'right' })
+      if (row.note) {
+        doc.fillColor(GRAY_LIGHT).font('Helvetica-Oblique').fontSize(8).text(row.note, 50, doc.y, { width: 500 })
       }
       doc.moveDown(0.5)
     }
 
-    line('Recurring subscription (this period)', breakdown.recurringTotal)
-    if (breakdown.setupFeeEgp > 0) {
-      line('One-time setup fee', breakdown.setupFeeEgp, 'Included on this statement only')
-    }
-
-    doc.moveDown(0.3)
-    doc.moveTo(56, doc.y).lineTo(556, doc.y).strokeColor('#E5E7EB').stroke()
-    doc.moveDown(0.4)
+    doc.x = 50
+    doc.moveDown(0.2)
+    ensureSpace(doc, 40)
     const totalY = doc.y
-    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(13).text('Total Due', 56, totalY, { width: 350 })
-    doc.font('Helvetica-Bold').fontSize(13).text(`${fmt(breakdown.totalDue)} EGP`, 380, totalY, { width: 176, align: 'right' })
-    doc.x = 56
+    const totalHeight = 30
+    doc.rect(50, totalY, 500, totalHeight).fill(TEAL_LIGHT)
+    doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(13).text('Total Due', 62, totalY + 8, { width: 300 })
+    doc.font('Helvetica-Bold').fontSize(13).text(`${fmt(breakdown.totalDue)} EGP`, 380, totalY + 8, { width: 158, align: 'right' })
+    doc.y = totalY + totalHeight
+    doc.x = 50
 
-    // See the same fix in feedbackPdf.js — zeroing the bottom margin stops
-    // PDFKit from auto-inserting a blank trailing page just to fit this
-    // one footer line past the normal margin boundary.
-    const bottomMargin = doc.page.margins.bottom
-    doc.page.margins.bottom = 0
-    doc.fillColor(GRAY).font('Helvetica-Oblique').fontSize(8).text('Technothera · Smart Dismissal System', 56, 750, {
-      width: 500,
-      align: 'center',
-    })
-    doc.page.margins.bottom = bottomMargin
-
+    footer(doc)
     doc.end()
   })
 }

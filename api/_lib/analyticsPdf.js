@@ -1,11 +1,6 @@
 import PDFDocument from 'pdfkit'
 import { METRIC_EXPLANATIONS } from '../../src/utils/analytics.js'
-
-const TEAL = '#2E5A63'
-const ACCENT = '#5F94AC'
-const GRAY = '#6B7280'
-const NOTE_GRAY = '#9CA3AF'
-const DARK = '#1F2937'
+import { TEAL, GRAY, GRAY_LIGHT, DARK, drawBanner, infoColumns, sectionHeading, glanceBoxes, table, note, footer, ensureSpace } from './pdfTheme.js'
 
 function fmtPct(n) {
   return `${Math.round(n * 100)}%`
@@ -18,17 +13,13 @@ function fmtMinutes(n) {
 // Prints "Label   Value" and, when given, a small plain-language line right
 // underneath explaining what that number means — so a non-technical
 // nursery owner reading the PDF alone doesn't need anyone to interpret it.
-function statLine(doc, label, value, note) {
+function statLine(doc, label, value, noteText) {
   doc.fillColor(DARK).font('Helvetica-Bold').fontSize(10).text(label, { continued: true })
   doc.font('Helvetica').fillColor(GRAY).text(`   ${value}`)
-  if (note) {
-    doc.font('Helvetica-Oblique').fontSize(8).fillColor(NOTE_GRAY).text(note, { indent: 10, width: 480 })
+  if (noteText) {
+    doc.font('Helvetica-Oblique').fontSize(8).fillColor(GRAY_LIGHT).text(noteText, { indent: 10, width: 480 })
   }
   doc.moveDown(0.35)
-}
-
-function ensureSpace(doc, needed) {
-  if (doc.y + needed > 740) doc.addPage()
 }
 
 export function buildAnalyticsPdf({ nursery, dateFrom, dateTo, overview, trend, granularity, peak, prepTime, arrival, delay, classBreakdown, insights }) {
@@ -38,38 +29,35 @@ export function buildAnalyticsPdf({ nursery, dateFrom, dateTo, overview, trend, 
     doc.on('data', (c) => chunks.push(c))
     doc.on('end', () => resolve(Buffer.concat(chunks)))
 
-    doc.fillColor(TEAL).font('Helvetica-Bold').fontSize(20).text('Smart Dismissal System — Usage Report')
-    doc.moveDown(0.3)
-    doc.fillColor(GRAY).font('Helvetica').fontSize(11)
-    doc.text(`Nursery: ${nursery.name}`)
-    doc.text(`Reporting period: ${dateFrom} to ${dateTo}`)
     // Pinned to Cairo explicitly — see the same fix in billingStatementPdf.js.
-    doc.text(`Generated: ${new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Africa/Cairo' })}`)
-    doc.moveDown(1)
+    const generatedAt = new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Africa/Cairo' })
 
-    doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text('Overview')
-    doc.moveDown(0.3)
-    statLine(doc, 'Actively enrolled children', String(overview.totalChildren), METRIC_EXPLANATIONS.enrolledChildren)
-    statLine(
-      doc,
-      'Used the system',
-      `${overview.activeChildren} (${fmtPct(overview.adoptionRate)})`,
-      METRIC_EXPLANATIONS.activeChildren
-    )
-    statLine(doc, 'Total pickup requests', String(overview.totalRequests), METRIC_EXPLANATIONS.totalRequests)
+    drawBanner(doc, {
+      leftTitle: 'TECHNOTHERA',
+      leftSubtitle: 'Smart Dismissal System',
+      rightTitle: 'USAGE REPORT',
+      rightSubtitle: `Generated: ${generatedAt}`,
+    })
+
+    infoColumns(doc, [
+      { label: 'Prepared For', lines: [nursery.name] },
+      { label: 'Reporting Period', lines: [`${dateFrom} to ${dateTo}`] },
+    ])
+
+    sectionHeading(doc, 'Overview')
+    glanceBoxes(doc, [
+      { label: 'Actively Enrolled', value: String(overview.totalChildren) },
+      { label: 'Used the System', value: `${overview.activeChildren} (${fmtPct(overview.adoptionRate)})` },
+      { label: 'Pickup Requests', value: String(overview.totalRequests) },
+    ])
+    note(doc, `${METRIC_EXPLANATIONS.enrolledChildren} ${METRIC_EXPLANATIONS.activeChildren}`)
     statLine(doc, 'Active days in period', String(overview.activeDaysCount), METRIC_EXPLANATIONS.activeDays)
-    statLine(
-      doc,
-      'Average requests per active day',
-      overview.avgPerActiveDay.toFixed(1),
-      METRIC_EXPLANATIONS.avgPerActiveDay
-    )
-    doc.moveDown(0.7)
+    statLine(doc, 'Average requests per active day', overview.avgPerActiveDay.toFixed(1), METRIC_EXPLANATIONS.avgPerActiveDay)
+    doc.moveDown(0.5)
 
     if (trend.length > 0) {
-      ensureSpace(doc, 160)
-      doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text(`Usage Trend (${granularity})`)
-      doc.moveDown(0.4)
+      ensureSpace(doc, 170)
+      sectionHeading(doc, `Usage Trend (${granularity})`)
 
       const chartTop = doc.y
       const chartHeight = 90
@@ -83,7 +71,7 @@ export function buildAnalyticsPdf({ nursery, dateFrom, dateTo, overview, trend, 
         const barHeight = Math.max(2, (t.count / max) * chartHeight)
         const x = chartLeft + i * (barWidth + barGap)
         const y = chartTop + (chartHeight - barHeight)
-        doc.rect(x, y, barWidth, barHeight).fill(ACCENT)
+        doc.rect(x, y, barWidth, barHeight).fill(TEAL)
       })
 
       doc.y = chartTop + chartHeight + 6
@@ -93,27 +81,26 @@ export function buildAnalyticsPdf({ nursery, dateFrom, dateTo, overview, trend, 
       // has no arrow glyph and silently renders it as garbled characters.
       doc.text(`${trend[0].label}  -  ${trend[trend.length - 1].label}`, chartLeft, doc.y, { width: chartWidth })
       doc.x = chartLeft
-      doc.font('Helvetica-Oblique').fillColor(NOTE_GRAY).fontSize(8).text(METRIC_EXPLANATIONS.usageTrend, chartLeft, doc.y, { width: chartWidth })
-      doc.x = 50
-      doc.moveDown(1)
+      doc.moveDown(0.3)
+      note(doc, METRIC_EXPLANATIONS.usageTrend)
     }
 
     ensureSpace(doc, 70)
-    doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text('Peak Usage')
-    doc.moveDown(0.3)
+    sectionHeading(doc, 'Peak Usage')
     doc
       .fillColor(GRAY)
       .font('Helvetica')
       .fontSize(10)
       .text(peak ? `Busiest time: ${peak.label} (${peak.count} requests)` : 'Not enough data to determine a peak period.')
     if (peak) {
-      doc.font('Helvetica-Oblique').fontSize(8).fillColor(NOTE_GRAY).text(METRIC_EXPLANATIONS.peakPeriod, { width: 500 })
+      doc.moveDown(0.2)
+      note(doc, METRIC_EXPLANATIONS.peakPeriod)
+    } else {
+      doc.moveDown(0.5)
     }
-    doc.moveDown(1)
 
     ensureSpace(doc, 90)
-    doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text('Dismissal Preparation Time')
-    doc.moveDown(0.3)
+    sectionHeading(doc, 'Dismissal Preparation Time')
     statLine(doc, 'Expected (configured target)', `${prepTime.expectedMinutes} minutes`, METRIC_EXPLANATIONS.prepExpected)
     statLine(
       doc,
@@ -123,12 +110,11 @@ export function buildAnalyticsPdf({ nursery, dateFrom, dateTo, overview, trend, 
         : 'Not enough data',
       METRIC_EXPLANATIONS.prepActual
     )
-    doc.moveDown(0.7)
+    doc.moveDown(0.5)
 
     if (delay.consideredCount > 0) {
-      ensureSpace(doc, 110)
-      doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text('Delay Time')
-      doc.moveDown(0.3)
+      ensureSpace(doc, 120)
+      sectionHeading(doc, 'Delay Time')
       statLine(
         doc,
         `Exceeded the ${prepTime.expectedMinutes}-minute target`,
@@ -136,82 +122,55 @@ export function buildAnalyticsPdf({ nursery, dateFrom, dateTo, overview, trend, 
         METRIC_EXPLANATIONS.delayExceeded
       )
       statLine(doc, 'Average delay when delayed', fmtMinutes(delay.avgDelayMinutes), METRIC_EXPLANATIONS.delayAverage)
-      doc.fillColor(NOTE_GRAY).font('Helvetica-Oblique').fontSize(8).text(
-        `Requests cancelled or cleared without ever being marked Ready or Delivered have no recorded end time and are excluded from these numbers (${fmtPct(delay.coverage)} of requests are covered).`,
-        { width: 500 }
+      note(
+        doc,
+        `Requests cancelled or cleared without ever being marked Ready or Delivered have no recorded end time and are excluded from these numbers (${fmtPct(delay.coverage)} of requests are covered).`
       )
-      doc.moveDown(1)
     }
 
     if (arrival.sampleSize > 0) {
       ensureSpace(doc, 90)
-      doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text('Parent Arrival-to-Handoff Time')
-      doc.moveDown(0.3)
+      sectionHeading(doc, 'Parent Arrival-to-Handoff Time')
       doc
         .fillColor(GRAY)
         .font('Helvetica')
         .fontSize(10)
         .text(`Average ${fmtMinutes(arrival.averageMinutes)}, based on ${arrival.sampleSize} of ${overview.totalRequests} requests (${fmtPct(arrival.coverage)} of pickups used the arrival button).`, { width: 500 })
-      doc.font('Helvetica-Oblique').fontSize(8).fillColor(NOTE_GRAY).text(METRIC_EXPLANATIONS.arrivalHandoff, { width: 500 })
-      doc.moveDown(1)
+      doc.moveDown(0.2)
+      note(doc, METRIC_EXPLANATIONS.arrivalHandoff)
     }
 
     if (classBreakdown.length > 0) {
-      ensureSpace(doc, 150)
-      doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text('Class-by-Class Performance')
-      doc.moveDown(0.2)
-      doc
-        .font('Helvetica-Oblique')
-        .fontSize(8)
-        .fillColor(NOTE_GRAY)
-        .text(
-          'Enrolled = actively enrolled in this class · Used = had a pickup this period · Avg Prep = average time to get a child ready · Delayed = pickups that ran past the target time.',
-          { width: 500 }
-        )
-      doc.moveDown(0.5)
-
-      const xs = [50, 180, 250, 320, 390, 470]
-      const widths = [130, 70, 70, 70, 80, 80]
-      const headerY = doc.y
-      doc.font('Helvetica-Bold').fontSize(9).fillColor(DARK)
-      ;['Class', 'Enrolled', 'Used', 'Requests', 'Avg Prep', 'Delayed'].forEach((h, i) =>
-        doc.text(h, xs[i], headerY, { width: widths[i] })
+      ensureSpace(doc, 170)
+      sectionHeading(doc, 'Class-by-Class Performance')
+      note(
+        doc,
+        'Enrolled = actively enrolled in this class · Used = had a pickup this period · Avg Prep = average time to get a child ready · Delayed = pickups that ran past the target time.'
       )
-      doc.moveDown(1)
-      doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor('#E5E7EB').stroke()
-      doc.moveDown(0.4)
+      doc.moveDown(0.2)
 
-      doc.font('Helvetica').fontSize(9).fillColor(GRAY)
-      for (const row of classBreakdown) {
-        ensureSpace(doc, 20)
-        const rowY = doc.y
-        doc.text(row.className, xs[0], rowY, { width: widths[0] })
-        doc.text(String(row.totalChildren), xs[1], rowY, { width: widths[1] })
-        doc.text(String(row.activeChildren), xs[2], rowY, { width: widths[2] })
-        doc.text(String(row.totalRequests), xs[3], rowY, { width: widths[3] })
-        doc.text(fmtMinutes(row.avgPrepMinutes), xs[4], rowY, { width: widths[4] })
-        doc.text(
+      table(doc, {
+        columns: [
+          { header: 'Class', width: 150 },
+          { header: 'Enrolled', width: 70, align: 'right' },
+          { header: 'Used', width: 65, align: 'right' },
+          { header: 'Requests', width: 70, align: 'right' },
+          { header: 'Avg Prep', width: 80, align: 'right' },
+          { header: 'Delayed', width: 65, align: 'right' },
+        ],
+        rows: classBreakdown.map((row) => [
+          row.className,
+          String(row.totalChildren),
+          String(row.activeChildren),
+          String(row.totalRequests),
+          fmtMinutes(row.avgPrepMinutes),
           row.totalRequests > 0 ? `${row.delayedCount} (${fmtPct(row.delayedRate)})` : '—',
-          xs[5],
-          rowY,
-          { width: widths[5] }
-        )
-        doc.moveDown(0.9)
-      }
-      // The loop above always finishes with an explicit-x .text() call in
-      // the rightmost column (x=470) — pdfkit leaves doc.x sitting there
-      // afterward, not back at the page margin. Left unreset, the very next
-      // default-x .text() call (Key Insights, below) inherits x=470 and its
-      // 500pt width runs straight off the right edge of the page, silently
-      // clipping the text mid-word instead of wrapping.
-      doc.x = 50
-      doc.moveDown(0.6)
+        ]),
+      })
     }
 
     ensureSpace(doc, 100)
-    doc.x = 50
-    doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(13).text('Key Insights')
-    doc.moveDown(0.4)
+    sectionHeading(doc, 'Key Insights')
     doc.font('Helvetica').fontSize(10).fillColor(GRAY)
     for (const line of insights) {
       ensureSpace(doc, 24)
@@ -219,17 +178,7 @@ export function buildAnalyticsPdf({ nursery, dateFrom, dateTo, overview, trend, 
       doc.moveDown(0.4)
     }
 
-    // See the same fix in feedbackPdf.js — zeroing the bottom margin stops
-    // PDFKit from auto-inserting a blank trailing page just to fit this
-    // one footer line past the normal margin boundary.
-    const bottomMargin = doc.page.margins.bottom
-    doc.page.margins.bottom = 0
-    doc.fillColor(GRAY).font('Helvetica-Oblique').fontSize(8).text('Technothera · Smart Dismissal System', 50, 760, {
-      width: 512,
-      align: 'center',
-    })
-    doc.page.margins.bottom = bottomMargin
-
+    footer(doc)
     doc.end()
   })
 }
