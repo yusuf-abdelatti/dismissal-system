@@ -14,3 +14,8 @@ Login Info - Finnly.zip
 *.mp4
 .vercel
 .env*
+
+# Reference/onboarding materials collected from around the drive — not
+# app code, some of it business-sensitive (pricing, presentations); never
+# meant to be pushed to GitHub.
+onboarding-materials/

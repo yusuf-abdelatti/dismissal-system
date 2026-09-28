@@ -133,10 +133,16 @@ export function table(doc, { columns, rows, highlightLastRow = false }) {
   doc.y = headerY + headerHeight
 
   rows.forEach((row, rowIndex) => {
-    ensureSpace(doc, 24)
     const isLast = highlightLastRow && rowIndex === rows.length - 1
+    doc.font(isLast ? 'Helvetica-Bold' : 'Helvetica').fontSize(9.5)
+    // Sized to the tallest wrapped cell, not a fixed height — a row with a
+    // multi-line cell would otherwise overlap the row drawn right after it.
+    const rowHeight = Math.max(
+      20,
+      ...row.map((cell, i) => doc.heightOfString(String(cell), { width: widths[i] - 12 }) + 10)
+    )
+    ensureSpace(doc, rowHeight + 4)
     const rowY = doc.y
-    const rowHeight = 20
 
     if (isLast) {
       doc.rect(MARGIN, rowY, totalWidth, rowHeight).fill(TEAL_LIGHT)
@@ -162,6 +168,40 @@ export function note(doc, text) {
   doc.fillColor(GRAY_LIGHT).font('Helvetica-Oblique').fontSize(8).text(text, MARGIN, doc.y, { width: doc.page.width - MARGIN * 2 })
   doc.moveDown(0.6)
   doc.x = MARGIN
+}
+
+// A full-page navy divider — a dedicated title page before each major part of a
+// multi-section document (e.g. a nursery onboarding kit), distinct from
+// `sectionHeading` (an inline heading within a page's normal flow). The caller
+// is responsible for calling doc.addPage() immediately before this, except
+// before the very first divider — a fresh PDFDocument already starts on page 1.
+export function dividerPage(doc, { eyebrow, title, subtitle }) {
+  const { width, height } = doc.page
+  doc.rect(0, 0, width, height).fill(NAVY)
+
+  const centerY = height / 2
+
+  if (eyebrow) {
+    doc
+      .fillColor(TEAL_LIGHT)
+      .font('Helvetica-Bold')
+      .fontSize(13)
+      .text(eyebrow.toUpperCase(), 60, centerY - 70, { width: width - 120, align: 'center', characterSpacing: 2 })
+  }
+
+  doc
+    .fillColor(WHITE)
+    .font('Helvetica-Bold')
+    .fontSize(30)
+    .text(title, 60, centerY - 40, { width: width - 120, align: 'center' })
+
+  if (subtitle) {
+    doc
+      .fillColor('#C7D2DE')
+      .font('Helvetica')
+      .fontSize(13)
+      .text(subtitle, 60, doc.y + 14, { width: width - 120, align: 'center' })
+  }
 }
 
 export function footer(doc) {
