@@ -177,6 +177,50 @@ Deno.serve(async (req) => {
       return json({ ok: true })
     }
 
+    if (action === 'listSuperAdmins') {
+      if (!isSuperAdmin) return json({ error: 'Forbidden' }, 403)
+
+      const { data: rows, error } = await adminClient.from('super_admins').select('id, created_at')
+      if (error) return json({ error: error.message }, 400)
+
+      // super_admins only stores the auth user id — pull the matching emails
+      // from Auth in one listUsers() call rather than one getUserById() per row.
+      const { data: usersData, error: usersError } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
+      if (usersError) return json({ error: usersError.message }, 400)
+      const emailById = new Map(usersData.users.map((u) => [u.id, u.email]))
+
+      const admins = (rows || []).map((r) => ({
+        id: r.id,
+        email: emailById.get(r.id) || '(deleted user)',
+        createdAt: r.created_at,
+      }))
+      return json({ admins })
+    }
+
+    if (action === 'createSuperAdmin') {
+      if (!isSuperAdmin) return json({ error: 'Forbidden' }, 403)
+
+      const { email, password } = params
+      if (!email || !password) return json({ error: 'email and password are required' }, 400)
+      if (password.length < 6) return json({ error: 'Password must be at least 6 characters' }, 400)
+
+      const { data, error } = await adminClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      })
+      if (error) return json({ error: error.message }, 400)
+
+      const { error: insertError } = await adminClient.from('super_admins').insert({ id: data.user.id })
+      if (insertError) {
+        // Don't leave a dangling auth user with no matching super_admins row.
+        await adminClient.auth.admin.deleteUser(data.user.id)
+        return json({ error: insertError.message }, 400)
+      }
+
+      return json({ admin: { id: data.user.id, email: data.user.email } })
+    }
+
     if (action === 'deleteNursery') {
       const { nurseryId } = params
       if (!nurseryId) return json({ error: 'nurseryId is required' }, 400)

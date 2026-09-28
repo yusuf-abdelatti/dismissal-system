@@ -52,3 +52,11 @@ export function updateEmail(userId, email) {
 export function deleteNursery(nurseryId) {
   return callAdminUsers({ action: 'deleteNursery', nurseryId })
 }
+
+export function listSuperAdmins() {
+  return callAdminUsers({ action: 'listSuperAdmins' }).then((data) => data.admins)
+}
+
+export function createSuperAdmin(email, password) {
+  return callAdminUsers({ action: 'createSuperAdmin', email, password }).then((data) => data.admin)
+}
