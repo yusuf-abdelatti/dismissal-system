@@ -6,6 +6,18 @@ import { supabase } from '../supabaseClient'
 // stuck (not just the data being momentarily stale).
 const HARD_RESYNC_INTERVAL_MS = 20 * 60 * 1000
 
+// Supabase's own auto-refresh timer only runs while the tab reports itself
+// as visible (its GoTrueClient stops it on a "hidden" visibilitychange and
+// only restarts it on a matching "visible" one). Some embedded/kiosk TV
+// browsers fire a stray "hidden" event without ever firing "visible" again,
+// which permanently stops that internal ticker. Once that happens the login
+// session's token silently expires, and every request after that — this
+// fetch and the realtime channel's own auth — fails with nothing on screen
+// to show it, which on a kiosk display looks exactly like it's frozen.
+// Refreshing explicitly on our own timer sidesteps that failure mode
+// entirely, independent of the library's internal visibility gating.
+const SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000
+
 export function usePickupRequests() {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
@@ -37,9 +49,19 @@ export function usePickupRequests() {
       .not('status', 'in', '("delivered","cleared")')
       .order('requested_at', { ascending: true })
 
-    if (!error && data) {
-      setRequests(data)
+    if (error) {
+      // No longer silent — surfaces in the console for future debugging,
+      // and attempts an immediate session refresh in case an expired,
+      // unrefreshed token is the cause (see SESSION_REFRESH_INTERVAL_MS).
+      console.error('Failed to fetch pickup requests:', error)
+      await supabase.auth.refreshSession().catch((refreshError) => {
+        console.error('Session refresh also failed:', refreshError)
+      })
+      setLoading(false)
+      return
     }
+
+    setRequests(data)
     setLoading(false)
   }
 
@@ -97,11 +119,22 @@ export function usePickupRequests() {
     // stuck rather than just momentarily behind.
     const hardResyncInterval = setInterval(resync, HARD_RESYNC_INTERVAL_MS)
 
+    // See SESSION_REFRESH_INTERVAL_MS above — keeps the login session alive
+    // on a long-running kiosk tab even if the browser's visibility events
+    // never come back, so the poll/resync above never run into a
+    // permanently expired token in the first place.
+    const sessionRefreshInterval = setInterval(() => {
+      supabase.auth.refreshSession().catch((err) => {
+        console.error('Periodic session refresh failed:', err)
+      })
+    }, SESSION_REFRESH_INTERVAL_MS)
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('online', handleOnline)
       clearInterval(pollInterval)
       clearInterval(hardResyncInterval)
+      clearInterval(sessionRefreshInterval)
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
       }
