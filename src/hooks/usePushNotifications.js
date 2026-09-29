@@ -23,12 +23,23 @@ export function usePushNotifications(userId) {
       setStatus('unsupported')
       return
     }
-    if (Notification.permission === 'granted') {
-      setStatus('subscribed')
-    } else if (Notification.permission === 'denied') {
+    if (Notification.permission === 'denied') {
       setStatus('denied')
+      return
     }
-  }, [isSupported])
+    if (Notification.permission === 'granted' && userId) {
+      // Permission was already granted — almost always because a *different*
+      // account subscribed from this same device before (a shared classroom
+      // tablet, or a parent checking on two children from one phone). Calling
+      // subscribe() here re-runs silently: the browser hands back the same
+      // existing push subscription without any prompt, and the cleanup logic
+      // inside subscribe() reassigns that device's endpoint to whoever is
+      // logged in now. Without this, the row just keeps pointing at the
+      // previous account until someone happens to tap the button again.
+      subscribe()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSupported, userId])
 
   const subscribe = async () => {
     try {
