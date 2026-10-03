@@ -4,6 +4,7 @@ import { TenantProvider, useTenant } from './hooks/useTenant'
 import LoginPage from './components/LoginPage'
 import InstallGuide from './components/InstallGuide'
 import ProtectedRoute from './components/ProtectedRoute'
+import LicenseGate from './components/LicenseGate'
 import ParentApp from './interfaces/parent/ParentApp'
 import DisplayScreen from './interfaces/display/DisplayScreen'
 import StaffApp from './interfaces/staff/StaffApp'
@@ -77,7 +78,9 @@ function AppRoutes() {
         path="/staff"
         element={
           <ProtectedRoute allowedRoles={['staff']}>
-            <StaffApp />
+            <LicenseGate>
+              <StaffApp />
+            </LicenseGate>
           </ProtectedRoute>
         }
       />
@@ -86,7 +89,9 @@ function AppRoutes() {
         path="/admin/*"
         element={
           <ProtectedRoute allowedRoles={['admin']}>
-            <AdminDashboard />
+            <LicenseGate>
+              <AdminDashboard />
+            </LicenseGate>
           </ProtectedRoute>
         }
       />

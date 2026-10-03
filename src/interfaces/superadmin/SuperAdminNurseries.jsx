@@ -34,6 +34,7 @@ const EMPTY_FORM = {
   timezone: 'UTC',
   child_limit: '',
   email_domain: '',
+  license_expires_at: '',
 }
 
 function toForm(nursery) {
@@ -50,6 +51,7 @@ function toForm(nursery) {
     timezone: nursery.timezone,
     child_limit: nursery.child_limit ?? '',
     email_domain: nursery.email_domain || '',
+    license_expires_at: nursery.license_expires_at || '',
   }
 }
 
@@ -67,6 +69,7 @@ function toPayload(form) {
     timezone: form.timezone.trim() || 'UTC',
     child_limit: form.child_limit === '' ? null : Number(form.child_limit),
     email_domain: form.email_domain.trim().toLowerCase().replace(/^@/, '') || null,
+    license_expires_at: form.license_expires_at || null,
   }
 }
 
@@ -506,6 +509,22 @@ export default function SuperAdminNurseries() {
             </div>
             <p className="text-xs text-gray-400 mt-1">
               When set, this nursery's admin can only create staff/parent accounts ending in this domain.
+            </p>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              License Expiry Date <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <input
+              type="date"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={form.license_expires_at}
+              onChange={(e) => setForm((f) => ({ ...f, license_expires_at: e.target.value }))}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              When set, shows a "license expires in N days" warning to this nursery's admin and staff only
+              (never parents or the display screen). Leave blank to turn the warning off.
             </p>
           </div>
 

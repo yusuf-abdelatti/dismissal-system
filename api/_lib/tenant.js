@@ -43,7 +43,7 @@ export function getAdminClient() {
 }
 
 const NURSERY_FIELDS =
-  'id, slug, name, pwa_short_name, logo_url, icon_url, primary_color, secondary_color, background_color, pickup_countdown_seconds, timezone, requests_open_time, is_active'
+  'id, slug, name, pwa_short_name, logo_url, icon_url, primary_color, secondary_color, background_color, pickup_countdown_seconds, timezone, requests_open_time, is_active, license_expires_at'
 
 // `?slug=` query override lets a plain (non-subdomain) preview/dev URL still
 // pick a tenant for testing without needing wildcard DNS set up yet.
@@ -57,7 +57,12 @@ export async function getNurseryForRequest(req) {
     .eq('slug', slug)
     .maybeSingle()
 
-  if (error || !data || !data.is_active) return null
+  // Deliberately NOT gated on is_active here — a paused nursery's parents
+  // and display screen must keep resolving normally and working exactly as
+  // before (per product decision: pausing is aimed at admin/staff only,
+  // never shown to parents or on the reception display). `isActive` is
+  // exposed below so the client can gate just the admin/staff interfaces.
+  if (error || !data) return null
   return data
 }
 
@@ -79,5 +84,7 @@ export function toPublicNursery(nursery) {
     pickupCountdownSeconds: nursery.pickup_countdown_seconds,
     timezone: nursery.timezone,
     requestsOpenTime: nursery.requests_open_time,
+    isActive: nursery.is_active,
+    licenseExpiresAt: nursery.license_expires_at,
   }
 }

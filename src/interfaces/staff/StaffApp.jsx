@@ -6,6 +6,7 @@ import { usePickupRequests } from '../../hooks/usePickupRequests'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
 import { sortRequests } from '../../utils/sorting'
 import { getCountdownSeconds, formatCountdown, isOverdue, getOverdueSeconds } from '../../utils/countdown'
+import LicenseBanner from '../../components/LicenseBanner'
 
 function CountdownBadge({ requestedAt, status, durationSeconds }) {
   const [tick, setTick] = useState(0)
@@ -260,6 +261,7 @@ export default function StaffApp() {
       )}
 
       <div className="flex-1 p-4 max-w-2xl mx-auto w-full">
+        <LicenseBanner />
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-3 text-sm">

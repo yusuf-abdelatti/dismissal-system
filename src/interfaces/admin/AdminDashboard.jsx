@@ -11,6 +11,7 @@ import AdminSettings from './AdminSettings'
 import AdminRequests from './AdminRequests'
 import AdminHistory from './AdminHistory'
 import AdminPromotion from './AdminPromotion'
+import LicenseBanner from '../../components/LicenseBanner'
 
 const NAV_ITEMS = [
   { path: 'requests', label: 'Active Requests' },
@@ -128,6 +129,7 @@ export default function AdminDashboard() {
         </header>
 
         <main className="flex-1 p-6">
+          <LicenseBanner />
           <Routes>
             <Route index element={<Navigate to="requests" replace />} />
             <Route path="requests" element={<AdminRequests />} />

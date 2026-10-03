@@ -17,6 +17,8 @@ const DEFAULT_TENANT = {
   pickupCountdownSeconds: 600,
   timezone: 'UTC',
   requestsOpenTime: null,
+  isActive: true,
+  licenseExpiresAt: null,
 }
 
 const TenantContext = createContext({ tenant: DEFAULT_TENANT, loading: true })
@@ -117,6 +119,13 @@ export function TenantProvider({ children }) {
               // (an admin clearing the restriction back to "always open"),
               // and postgres_changes always sends the full new row.
               requestsOpenTime: row.requests_open_time,
+              // No `??` fallback on isActive either — false is a meaningful,
+              // intentional value (a nursery being paused), and this is what
+              // makes a Super Admin flipping it back on take effect live in
+              // any already-open admin/staff tab, no refresh or re-login
+              // needed.
+              isActive: row.is_active,
+              licenseExpiresAt: row.license_expires_at,
             }
             applyBranding(updated)
             return updated
