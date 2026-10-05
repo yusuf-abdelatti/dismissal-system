@@ -1,3 +1,4 @@
+import { apiUrl } from '../../native/platform'
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabaseClient'
@@ -113,7 +114,7 @@ export default function NurseryAnalyticsDetail() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/generate-nursery-report', {
+      const res = await fetch(apiUrl('/api/generate-nursery-report'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

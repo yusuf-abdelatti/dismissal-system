@@ -1,5 +1,7 @@
-import { createContext, useContext, useEffect, useState, useRef } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react'
 import { supabase } from '../supabaseClient'
+import { isNative, apiUrl } from '../native/platform'
+import { getStoredNurseryCode, storeNurseryCode } from '../native/nurseryStorage'
 
 // Falls back to today's Finnly look whenever /api/nursery can't resolve a
 // tenant (plain `vite dev` without the API layer, an apex/no-subdomain visit,
@@ -56,36 +58,78 @@ function applyBranding(tenant) {
   if (tenant.iconUrl || tenant.logoUrl) setLink('apple-touch-icon', tenant.iconUrl || tenant.logoUrl)
 }
 
+// Resolves a tenant by slug (native nursery code or ?slug= override), or from
+// the Host header when no slug is given. Resolves null for an unknown nursery.
+async function fetchTenant(slug) {
+  const url = slug
+    ? apiUrl(`/api/nursery?slug=${encodeURIComponent(slug)}`)
+    : apiUrl('/api/nursery')
+  const res = await fetch(url)
+  return res.ok ? res.json() : null
+}
+
 export function TenantProvider({ children }) {
   const [tenant, setTenant] = useState(DEFAULT_TENANT)
   const [loading, setLoading] = useState(true)
+  // Native apps have no subdomain, so on first launch the user must type a
+  // nursery code before any branding (or login) can be shown.
+  const [needsNurseryCode, setNeedsNurseryCode] = useState(false)
 
   useEffect(() => {
     let cancelled = false
 
-    // ?slug= lets you test tenant resolution on the current Vercel domain
-    // before wildcard DNS (*.technothera.com) is live — e.g. ?slug=finnly
-    const slugOverride = new URLSearchParams(window.location.search).get('slug')
-    const url = slugOverride ? `/api/nursery?slug=${encodeURIComponent(slugOverride)}` : '/api/nursery'
+    const applyResolved = (data) => {
+      if (cancelled) return
+      const resolved = data ? { ...DEFAULT_TENANT, ...data } : DEFAULT_TENANT
+      setTenant(resolved)
+      applyBranding(resolved)
+    }
 
-    fetch(url)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (cancelled) return
-        const resolved = data ? { ...DEFAULT_TENANT, ...data } : DEFAULT_TENANT
-        setTenant(resolved)
-        applyBranding(resolved)
-      })
-      .catch(() => {
+    async function load() {
+      try {
+        if (isNative) {
+          const stored = await getStoredNurseryCode()
+          if (cancelled) return
+          if (!stored) {
+            setNeedsNurseryCode(true)
+            return
+          }
+          applyResolved(await fetchTenant(stored))
+          return
+        }
+
+        // ?slug= lets you test tenant resolution on the current Vercel domain
+        // before wildcard DNS (*.technothera.com) is live — e.g. ?slug=finnly
+        const slugOverride = new URLSearchParams(window.location.search).get('slug')
+        applyResolved(await fetchTenant(slugOverride))
+      } catch {
         if (!cancelled) applyBranding(DEFAULT_TENANT)
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false)
-      })
+      }
+    }
+
+    load()
 
     return () => {
       cancelled = true
     }
+  }, [])
+
+  // Returns true when the code matched a nursery, false when it did not.
+  // Network errors throw so the screen can say "check your connection".
+  const submitNurseryCode = useCallback(async (code) => {
+    const slug = code.trim().toLowerCase()
+    if (!slug) return false
+    const data = await fetchTenant(slug)
+    if (!data) return false
+    await storeNurseryCode(slug)
+    const resolved = { ...DEFAULT_TENANT, ...data }
+    setTenant(resolved)
+    applyBranding(resolved)
+    setNeedsNurseryCode(false)
+    setLoading(false)
+    return true
   }, [])
 
   // Settings (countdown length, colors, logo, name) only apply to sessions
@@ -138,7 +182,7 @@ export function TenantProvider({ children }) {
   }, [tenant.id])
 
   return (
-    <TenantContext.Provider value={{ tenant, loading }}>
+    <TenantContext.Provider value={{ tenant, loading, needsNurseryCode, submitNurseryCode }}>
       {children}
     </TenantContext.Provider>
   )

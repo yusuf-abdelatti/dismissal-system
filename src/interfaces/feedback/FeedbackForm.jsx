@@ -1,3 +1,4 @@
+import { apiUrl } from '../../native/platform'
 import { useState } from 'react'
 import { FEEDBACK_SECTIONS, NURSERY_OPTIONS } from '../../utils/feedbackQuestions'
 
@@ -146,7 +147,7 @@ export default function FeedbackForm() {
 
     setSubmitting(true)
     try {
-      const res = await fetch('/api/submit-feedback', {
+      const res = await fetch(apiUrl('/api/submit-feedback'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nurseryName, respondentName, pilotPeriod, answers }),
