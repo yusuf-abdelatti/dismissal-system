@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webPush from 'npm:web-push@3.6.7'
+import { sendNativePushToUser } from '../_shared/native-push.ts'
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -12,15 +13,16 @@ webPush.setVapidDetails(
   Deno.env.get('VAPID_PRIVATE_KEY')!
 )
 
-async function sendToUser(userId: string, payload: object) {
+async function sendToUser(userId: string, payload: { title: string; body: string; icon?: string }) {
+  // Installed store apps (FCM/APNs) first; never throws, see native-push.ts.
+  await sendNativePushToUser(supabase, userId, { title: payload.title, body: payload.body })
+
   const { data: subs } = await supabase
     .from('push_subscriptions')
     .select('subscription, endpoint')
     .eq('user_id', userId)
 
-  if (!subs?.length) return
-
-  for (const sub of subs) {
+  for (const sub of subs ?? []) {
     try {
       const parsed = JSON.parse(sub.subscription)
       await webPush.sendNotification(parsed, JSON.stringify(payload))
