@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../hooks/useAuth'
 import { useTenant } from '../../hooks/useTenant'
+import { releaseNativePush } from '../../native/push'
 import { usePickupRequests } from '../../hooks/usePickupRequests'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
 import { sortRequests } from '../../utils/sorting'
@@ -184,6 +185,7 @@ export default function StaffApp() {
   }
 
   const logout = async () => {
+    await releaseNativePush()
     await supabase.auth.signOut()
   }
 

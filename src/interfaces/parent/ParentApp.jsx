@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../hooks/useAuth'
 import { useTenant } from '../../hooks/useTenant'
+import { releaseNativePush } from '../../native/push'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
 import { getCountdownSeconds, formatCountdown, isOverdue } from '../../utils/countdown'
 import { isRequestsOpen, formatOpenTimeLabel } from '../../utils/openingHours'
@@ -249,6 +250,7 @@ export default function ParentApp() {
   }
 
   const logout = async () => {
+    await releaseNativePush()
     await supabase.auth.signOut()
   }
 
@@ -266,7 +268,7 @@ export default function ParentApp() {
         <div className="text-center">
           <p className="text-red-600 text-lg mb-4">{error}</p>
           <button
-            onClick={() => supabase.auth.signOut()}
+            onClick={async () => { await releaseNativePush(); supabase.auth.signOut() }}
             className="text-sm text-gray-500 underline"
           >
             Sign out

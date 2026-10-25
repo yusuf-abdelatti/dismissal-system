@@ -1,0 +1,22 @@
+{
+  "name": "technothera-dismissal-native",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Technothera Dismissal Capacitor shell (web bundle from ../dist-native)",
+  "scripts": {
+    "build:web": "node ../scripts/build-native.mjs",
+    "sync": "npx cap sync",
+    "open:android": "npx cap open android",
+    "open:ios": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8",
+    "@capacitor/core": "^8",
+    "@capacitor/ios": "^8",
+    "@capacitor/preferences": "^8",
+    "@capacitor/push-notifications": "^8"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8"
+  }
+}

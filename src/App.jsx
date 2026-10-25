@@ -1,6 +1,11 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { TenantProvider, useTenant } from './hooks/useTenant'
+import { isNative } from './native/platform'
+import { registerNativePush, releaseNativePush } from './native/push'
+import { supabase } from './supabaseClient'
+import NurseryCodeScreen from './components/NurseryCodeScreen'
 import LoginPage from './components/LoginPage'
 import InstallGuide from './components/InstallGuide'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -24,13 +29,106 @@ const ROLE_REDIRECTS = {
 // Blocks rendering until the tenant is resolved from the subdomain, so no
 // page ever flashes another nursery's (or the default) branding first.
 function TenantGate({ children }) {
-  const { loading } = useTenant()
+  const { loading, needsNurseryCode } = useTenant()
 
   if (loading) {
     return <div className="min-h-screen bg-gray-900" />
   }
 
+  // Native first launch only: no nursery code stored yet.
+  if (needsNurseryCode) return <NurseryCodeScreen />
+
   return children
+}
+
+// Native apps: keep the device registered for push while someone is signed in.
+function NativePushRegistrar() {
+  const { user } = useAuth()
+  const userId = user?.id
+
+  useEffect(() => {
+    if (isNative && userId) registerNativePush(userId)
+  }, [userId])
+
+  return null
+}
+
+// Only staff and parent accounts belong in the native app. Someone signed
+// into an admin/superadmin/display account gets this screen rather than a
+// redirect loop, and can sign out from here.
+function WrongAppScreen() {
+  const signOut = async () => {
+    await releaseNativePush()
+    await supabase.auth.signOut()
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--tenant-bg, #EAE5DF)' }}>
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-md p-6 text-center space-y-4">
+        <p className="text-gray-800">
+          This app is for staff and parent accounts. Please contact your nursery.
+        </p>
+        <button onClick={signOut} className="text-sm underline text-gray-600">Sign out</button>
+      </div>
+    </div>
+  )
+}
+
+const NATIVE_ROLE_REDIRECTS = {
+  staff: '/staff',
+  parent: '/parent',
+}
+
+function NativeRootRedirect() {
+  const { user, role, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white text-lg">Loading…</div>
+      </div>
+    )
+  }
+
+  if (!user) return <Navigate to="/login" replace />
+  const path = NATIVE_ROLE_REDIRECTS[role]
+  if (path) return <Navigate to={path} replace />
+  return <WrongAppScreen />
+}
+
+// Route tree for the Technothera Dismissal store app. The role is resolved
+// after login (same as the web app's ROLE_REDIRECTS), not locked at build
+// time. Admin, superadmin, display and the public feedback form do not
+// exist in this build.
+function NativeAppRoutes() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<NativeRootRedirect />} />
+
+      <Route
+        path="/parent"
+        element={
+          <ProtectedRoute allowedRoles={['parent']}>
+            <ParentApp />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/staff"
+        element={
+          <ProtectedRoute allowedRoles={['staff']}>
+            <LicenseGate>
+              <StaffApp />
+            </LicenseGate>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
 }
 
 function RootRedirect() {
@@ -49,6 +147,8 @@ function RootRedirect() {
 }
 
 function AppRoutes() {
+  if (isNative) return <NativeAppRoutes />
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -117,7 +217,9 @@ export default function App() {
         <TenantGate>
           <AuthProvider>
             <AppRoutes />
-            <PWAInstallBanner />
+            {/* An installed store app is already installed; the banner is web-only. */}
+            {!isNative && <PWAInstallBanner />}
+            <NativePushRegistrar />
           </AuthProvider>
         </TenantGate>
       </TenantProvider>

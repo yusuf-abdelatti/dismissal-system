@@ -1,0 +1,63 @@
+# Proves the Technothera Dismissal store app compiles for the iOS simulator.
+#
+# Runs on a macOS runner because Xcode and CocoaPods only exist there. It does
+# NOT sign, archive or upload anything: CODE_SIGNING_ALLOWED=NO and a simulator
+# destination mean no Apple Developer account or certificate is needed.
+#
+# Trigger: push a branch, or run manually from the Actions tab
+# ("iOS simulator build" -> "Run workflow").
+name: iOS simulator build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'scripts/**'
+      - 'native/**'
+      - 'package*.json'
+      - '.github/workflows/ios-simulator-build.yml'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install web dependencies
+        run: npm ci
+
+      - name: Build web bundle
+        # Supabase keys are read from the VITE_* repository variables. The
+        # build still runs without them, but the app would not reach Supabase.
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build:native
+
+      - name: Install native project dependencies
+        working-directory: native
+        run: npm ci
+
+      - name: Sync web bundle into the iOS project (also runs CocoaPods)
+        working-directory: native
+        run: npx cap sync ios
+
+      - name: Compile for iOS simulator (no signing)
+        working-directory: native/ios/App
+        run: |
+          xcodebuild \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build

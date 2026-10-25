@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webPush from 'npm:web-push@3.6.7'
+import { sendNativePushToUser } from '../_shared/native-push.ts'
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -33,21 +34,22 @@ Deno.serve(async (req) => {
     const firstName = child.full_name.split(' ')[0]
     const icon = (child as any).nurseries?.logo_url || undefined
 
+    const title = '🌟 Your child is ready!'
+    const message = `${firstName} is ready and waiting — come on over 💛`
+
+    // Installed store apps (FCM/APNs). Runs before the Web Push loop and
+    // never throws, so a missing native credential cannot stop browser pushes.
+    await sendNativePushToUser(supabase, child.parent_user_id, { title, body: message })
+
     const { data: subs } = await supabase
       .from('push_subscriptions')
       .select('subscription, endpoint')
       .eq('user_id', child.parent_user_id)
 
-    if (!subs?.length) return new Response('ok')
-
-    for (const sub of subs) {
+    for (const sub of subs ?? []) {
       try {
         const parsed = JSON.parse(sub.subscription)
-        await webPush.sendNotification(parsed, JSON.stringify({
-          title: '🌟 Your child is ready!',
-          body: `${firstName} is ready and waiting — come on over 💛`,
-          icon,
-        }))
+        await webPush.sendNotification(parsed, JSON.stringify({ title, body: message, icon }))
         console.log('Parent notified')
       } catch (e: any) {
         console.error('Failed:', e.statusCode, e.message)

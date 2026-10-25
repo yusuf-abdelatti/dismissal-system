@@ -19,3 +19,20 @@ Login Info - Finnly.zip
 # app code, some of it business-sensitive (pricing, presentations); never
 # meant to be pushed to GitHub.
 onboarding-materials/
+
+# Native (Capacitor) build: generated web bundle, native build output and
+# local signing material. The placeholder keystore is never committed.
+dist-native
+native/android/app/build
+native/android/.gradle
+native/ios/App/build
+native/ios/App/Pods
+*.keystore
+*.jks
+native/android/keystore.properties
+native/android/app/google-services.json
+native/android/build
+native/android/app/src/main/assets/public
+native/ios/App/App/public
+native/ios/App/build
+native/ios/App/DerivedData

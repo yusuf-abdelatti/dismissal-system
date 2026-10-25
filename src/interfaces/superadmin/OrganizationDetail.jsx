@@ -1,3 +1,4 @@
+import { apiUrl } from '../../native/platform'
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../supabaseClient'
@@ -212,7 +213,7 @@ Technothera Finance Department`
     setSentOk(false)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/send-statement-email', {
+      const res = await fetch(apiUrl('/api/send-statement-email'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ statementId: latestStatement.id, to: sendToEmail, message: messageText }),
@@ -249,7 +250,7 @@ Technothera Finance Department`
     setError(null)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/generate-billing-statement', {
+      const res = await fetch(apiUrl('/api/generate-billing-statement'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({
@@ -307,7 +308,7 @@ Technothera Finance Department`
     setDownloadingId(statement.id)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/generate-billing-statement', {
+      const res = await fetch(apiUrl('/api/generate-billing-statement'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ statementId: statement.id }),
