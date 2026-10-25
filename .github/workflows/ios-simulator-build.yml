@@ -1,4 +1,4 @@
-# Proves both Finnly store apps compile for the iOS simulator.
+# Proves the Technothera Dismissal store app compiles for the iOS simulator.
 #
 # Runs on a macOS runner because Xcode and CocoaPods only exist there. It does
 # NOT sign, archive or upload anything: CODE_SIGNING_ALLOWED=NO and a simulator
@@ -23,10 +23,6 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        app: [staff, parent]
     steps:
       - uses: actions/checkout@v4
 
@@ -38,24 +34,24 @@ jobs:
       - name: Install web dependencies
         run: npm ci
 
-      - name: Build web bundle for ${{ matrix.app }}
+      - name: Build web bundle
         # Supabase keys are read from the VITE_* repository variables. The
         # build still runs without them, but the app would not reach Supabase.
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
-        run: npm run build:native:${{ matrix.app }}
+        run: npm run build:native
 
       - name: Install native project dependencies
-        working-directory: native/${{ matrix.app }}
+        working-directory: native
         run: npm ci
 
       - name: Sync web bundle into the iOS project (also runs CocoaPods)
-        working-directory: native/${{ matrix.app }}
+        working-directory: native
         run: npx cap sync ios
 
       - name: Compile for iOS simulator (no signing)
-        working-directory: native/${{ matrix.app }}/ios/App
+        working-directory: native/ios/App
         run: |
           xcodebuild \
             -workspace App.xcworkspace \

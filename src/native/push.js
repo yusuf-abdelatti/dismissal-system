@@ -4,10 +4,10 @@ import { supabase } from '../supabaseClient'
 import { isNative } from './platform'
 
 // Must match the channel id the Edge Functions send to (notify-*/native-push.ts).
-export const ANDROID_CHANNEL_ID = 'finnly_alerts'
-// Bundle ID / application ID of this build, injected per app via .env.staff /
-// .env.parent. Stored with the token because APNs needs it as the topic.
-const NATIVE_APP_ID = import.meta.env.VITE_NATIVE_APP_ID || ''
+export const ANDROID_CHANNEL_ID = 'dismissal_alerts'
+// Bundle ID / application ID of the native app. Stored with the token
+// because APNs needs it as the topic.
+const NATIVE_APP_ID = import.meta.env.VITE_NATIVE_APP_ID || 'com.technothera.dismissal'
 
 let listenersAttached = false
 let currentToken = null
@@ -23,7 +23,7 @@ async function ensureAndroidChannel() {
     description: 'Pickup requests and parent arrivals',
     importance: 5,
     visibility: 1,
-    sound: 'finnly_alert',
+    sound: 'dismissal_alert',
     vibration: true,
     lights: true,
   })

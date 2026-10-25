@@ -1,5 +1,5 @@
--- Native (FCM / APNs) push tokens for the installed Finnly Staff and Finnly
--- Parent store apps. Additive only: push_subscriptions (Web Push for the
+-- Native (FCM / APNs) push tokens for the installed Technothera Dismissal
+-- store app. Additive only: push_subscriptions (Web Push for the
 -- browser/PWA) is untouched and keeps working as before.
 --
 -- One row per installed app per device. The token is unique, so a device
@@ -11,8 +11,7 @@ create table if not exists device_push_tokens (
   user_id uuid not null references auth.users(id) on delete cascade,
   platform text not null check (platform in ('ios', 'android')),
   -- Bundle ID (iOS) / application ID (Android) of the app that issued the
-  -- token. APNs requires it as the topic, and the staff and parent apps
-  -- have different IDs.
+  -- token. APNs requires it as the topic.
   app_id text not null,
   token text not null unique,
   updated_at timestamptz not null default now()

@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "build:native:staff": "node scripts/build-native.mjs staff",
-    "build:native:parent": "node scripts/build-native.mjs parent"
+    "build:native": "node scripts/build-native.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.2",

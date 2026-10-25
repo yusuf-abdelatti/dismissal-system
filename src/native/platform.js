@@ -1,12 +1,8 @@
 import { Capacitor } from '@capacitor/core'
 
-// True only inside the Capacitor shells (staff / parent store apps). The web
-// build, admin, superadmin and display always see false.
+// True only inside the Capacitor shell (the Technothera Dismissal store app).
+// The web build always sees false.
 export const isNative = Capacitor.isNativePlatform()
-
-// Set at build time via .env.staff / .env.parent (VITE_APP_ROLE). Undefined
-// for the normal web build, which keeps every route mounted as before.
-export const APP_ROLE = import.meta.env.VITE_APP_ROLE || null
 
 // A WebView's origin is capacitor://localhost (iOS) or https://localhost
 // (Android), so relative /api calls would hit the wrong host. Native builds

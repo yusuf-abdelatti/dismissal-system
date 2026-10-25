@@ -1,6 +1,6 @@
-// Native push (FCM for Android, APNs for iOS) for the Finnly Staff / Parent
-// store apps. Called from notify-parent and notify-staff alongside the existing
-// Web Push loop, which is left unchanged.
+// Native push (FCM for Android, APNs for iOS) for the Technothera Dismissal
+// store app. Called from notify-parent and notify-staff alongside the
+// existing Web Push loop, which is left unchanged.
 //
 // Credentials come from env vars. If one is missing, the platform is skipped
 // with a clear log line rather than failing the whole function, so Web Push
@@ -14,8 +14,8 @@
 //                             (Xcode debug builds). Unset = production.
 //
 // Android notification channel id and sound name must match the app:
-//   channel 'finnly_alerts' (created client-side in src/native/push.js)
-//   sound 'finnly_alert'    (res/raw/finnly_alert.wav in each Android app)
+//   channel 'dismissal_alerts' (created client-side in src/native/push.js)
+//   sound 'dismissal_alert'    (res/raw/dismissal_alert.wav in native/android)
 
 export interface NativePayload {
   title: string
@@ -31,9 +31,9 @@ interface DeviceTokenRow {
 // deno-lint-ignore no-explicit-any
 type SupabaseLike = any
 
-const ANDROID_CHANNEL_ID = 'finnly_alerts'
-const ANDROID_SOUND = 'finnly_alert'
-const IOS_SOUND = 'finnly_alert.wav'
+const ANDROID_CHANNEL_ID = 'dismissal_alerts'
+const ANDROID_SOUND = 'dismissal_alert'
+const IOS_SOUND = 'dismissal_alert.wav'
 
 const enc = new TextEncoder()
 
